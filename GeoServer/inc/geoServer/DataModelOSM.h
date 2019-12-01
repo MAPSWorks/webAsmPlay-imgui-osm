@@ -95,7 +95,7 @@ namespace dataModelOSM
 
         std::vector<const OSM_Member *> m_members;
 
-        Relation * m_relation = NULL;
+        Relation * m_relation = nullptr;
     };
 
     struct OSM_Node : OSM_Base
@@ -103,6 +103,8 @@ namespace dataModelOSM
         glm::dvec2 m_pos;
 
         std::vector<OSM_Relation *> m_relations;
+
+		size_t m_useCount = 0;
     };
 
     struct OSM_Way : OSM_Base

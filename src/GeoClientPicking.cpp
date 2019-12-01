@@ -26,10 +26,12 @@
 */
 
 #include <geos/geom/GeometryFactory.h>
+#include <geos/geom/Point.h>
 #include <geos/algorithm/distance/DistanceToPoint.h>
 #include <geos/algorithm/distance/PointPairDistance.h>
 #include <geos/index/quadtree/Quadtree.h>
 #include <webAsmPlay/GUI/GUI.h>
+#include <webAsmPlay/shaders/ColorShader.h>
 #include <webAsmPlay/Debug.h>
 #include <webAsmPlay/renderables/Renderable.h>
 #include <webAsmPlay/geom/GeosUtil.h>
@@ -60,7 +62,7 @@ PointOnEdge GeoClient::pickLineStringRenderable(const vec3 & _pos) const
     
     double minDist = numeric_limits<double>::max();
 
-    Edge * closest = NULL;
+    Edge * closest = nullptr;
 
     Coordinate pointOnEdge;
 
@@ -70,7 +72,7 @@ PointOnEdge GeoClient::pickLineStringRenderable(const vec3 & _pos) const
     {
         Edge * data = (Edge *)_data;
 
-        const LineString * geom = data->getGeometry();
+        const auto geom = data->getGeometry();
 
         PointPairDistance ptDist;
 
@@ -97,16 +99,17 @@ pair<Renderable *, Attributes *> GeoClient::pickPolygonRenderable(const vec3 & _
     m_quadTreePolygons->query(&bounds, query);
     
     // TODO, there might be a method accepting a Coordinate
-    Point * p = scopedGeosGeometry(GeometryFactory::getDefaultInstance()->createPoint(Coordinate(pos.x, pos.y)));
+    auto p = scopedGeosGeometry(GeometryFactory::getDefaultInstance()->createPoint(Coordinate(pos.x, pos.y)));
 
     double minArea = numeric_limits<double>::max();
 
-    Renderable * smallest      = NULL;
-    Attributes * smallestAttrs = NULL;
+	typedef tuple<Renderable *, const Geometry *, Attributes *> AttributedGeom;
 
-    for(const void * _data : query)
+    AttributedGeom * smallest = nullptr;
+    
+    for(const auto _data : query)
     {
-        tuple<Renderable *, const Geometry *, Attributes *> * data = (tuple<Renderable *, const Geometry *, Attributes *> *)_data;
+        auto data = (AttributedGeom *)_data;
 
         const Geometry * geom = get<1>(*data);
 
@@ -116,12 +119,23 @@ pair<Renderable *, Attributes *> GeoClient::pickPolygonRenderable(const vec3 & _
 
         if(area >= minArea) { continue ;}
 
-        minArea       = area; 
-        smallest      = get<0>(*data);
-        smallestAttrs = get<2>(*data); 
+        minArea  = area; 
+		smallest = data;
     }
 
-    return make_pair(smallest, smallestAttrs);
+	if(!smallest) { return make_pair(nullptr, nullptr) ;}
+
+	if(!get<0>(*smallest))
+	{
+		if(get<0>(*smallest) = Renderable::create(get<1>(*smallest), m_trans))
+		{
+			get<0>(*smallest)->setRenderFill   (true);
+			get<0>(*smallest)->setRenderOutline(true);
+		}
+		else { dmess("Warn! Could not create renderable!") ;}
+	}
+
+    return make_pair(get<0>(*smallest), get<2>(*smallest));
 }
 
 vector<pair<Renderable *, Attributes *> > GeoClient::pickPolygonRenderables(const vec3 & _pos) const
@@ -134,19 +148,27 @@ vector<pair<Renderable *, Attributes *> > GeoClient::pickPolygonRenderables(cons
     
     m_quadTreePolygons->query(&bounds, query);
     
-    Point * p = scopedGeosGeometry(GeometryFactory::getDefaultInstance()->createPoint(Coordinate(pos.x, pos.y)));
+    auto p = scopedGeosGeometry(GeometryFactory::getDefaultInstance()->createPoint(Coordinate(pos.x, pos.y)));
 
     vector<tuple<Renderable *, Attributes *, double> > picked;
 
     for(const void * _data : query)
     {
-        tuple<Renderable *, const Geometry *, Attributes *> * data = (tuple<Renderable *, const Geometry *, Attributes *> *)_data;
-
-        const Geometry * geom = get<1>(*data);
+		auto [renderable, geom, attributes] = *(tuple<Renderable *, const Geometry *, Attributes *> *)_data;
 
         if(!p->within(geom)) { continue ;}
 
-        picked.push_back(make_tuple(get<0>(*data), get<2>(*data), geom->getArea()));
+		if(!renderable)
+		{
+			if(renderable = Renderable::create(geom, m_trans))
+			{
+				renderable->setRenderFill   (true);
+				renderable->setRenderOutline(true);
+			}
+			else { dmess("Warn! Could not create Renderable!") ;}
+		}
+
+        picked.push_back(make_tuple(renderable, attributes, geom->getArea()));
     }
 
     // Sort by area, smallest first.
@@ -159,27 +181,71 @@ vector<pair<Renderable *, Attributes *> > GeoClient::pickPolygonRenderables(cons
     return ret;
 }
 
+pair<Renderable*, Attributes*> GeoClient::pickPointRenderable(const vec3& _pos) const
+{
+    vector<pair<Renderable*, Attributes*> > ret;
+
+    const vec4 pos = m_inverseTrans * vec4(_pos, 1.0);
+
+    vector< void* > query;
+
+    const Envelope bounds(pos.x, pos.x, pos.y, pos.y);
+
+    m_quadTreePoints->query(&bounds, query);
+
+    double bestDistSoFar = numeric_limits<double>::max();
+
+    Attributes* attrs = nullptr;
+    Renderable* renderable = nullptr;
+
+    for (const void* _data : query)
+    {
+        auto [_renderable, geom, attributes] = *(tuple<Renderable*, const Geometry*, Attributes*>*)_data;
+
+        const auto point = dynamic_cast<const Point *>(geom);
+
+        const auto dist = glm::distance(vec2(pos), { point->getX(), point->getY() });
+
+        if (dist >= bestDistSoFar) { continue; }
+
+        bestDistSoFar = dist;
+
+        attrs = attributes;
+
+        renderable = _renderable;
+    }
+
+    return { renderable, attrs };
+}
+
 string GeoClient::doPicking(const char mode, const dvec4 & pos) const
 {
-    Renderable * renderable;
-    Attributes * attrs;
-
     switch(mode)
     {
-        case GUI::PICK_MODE_LINESTRING:
+		case GUI::PICK_MODE_LINESTRING:
         case GUI::SET_PATH_START_POINT:
         case GUI::FIND_PATH:
         {
-            Edge * edge;
-            dvec2  pointOnEdge;
-
-            tie(pointOnEdge, edge) = pickLineStringRenderable(m_canvas->getCursorPosWC());
+            auto [pointOnEdge, edge] = pickLineStringRenderable(m_canvas->getCursorPosWC());
 
             if(!edge) { break ;}
 
+			if(!edge->getRenderable())
+			{
+				unique_ptr<Geometry> bufferedEdge(edge->getGeometry()->buffer(0.00001, 3));
+
+				if(auto r = Renderable::create(bufferedEdge, m_trans))
+				{
+					r->setRenderFill   (true);
+					r->setRenderOutline(true);
+
+					edge->setRenderable(r);
+				}
+			}
+
 			edge->getRenderable()->ensureVAO();
 
-            edge->getRenderable()->render(m_canvas);
+            edge->getRenderable()->render(m_canvas, POST_G_BUFFER);
 
             m_canvas->renderCursor(m_trans * dvec4(pointOnEdge, 0, 1));
 
@@ -187,7 +253,7 @@ string GeoClient::doPicking(const char mode, const dvec4 & pos) const
         }
         case GUI::PICK_MODE_POLYGON_SINGLE:
         {
-            tie(renderable, attrs) = pickPolygonRenderable(m_canvas->getCursorPosWC());
+            auto [renderable, attrs] = pickPolygonRenderable(m_canvas->getCursorPosWC());
 
             if(!renderable) { return "" ;}
             
@@ -196,21 +262,21 @@ string GeoClient::doPicking(const char mode, const dvec4 & pos) const
 
 			renderable->ensureVAO();
 
-			renderable->render(m_canvas);
+			renderable->render(m_canvas, POST_G_BUFFER);
 
             return attrs->toString();
         }
         case GUI::PICK_MODE_POLYGON_MULTIPLE:
         {
-            vector<pair<Renderable *, Attributes *> > picked = pickPolygonRenderables(m_canvas->getCursorPosWC());
+            auto picked = pickPolygonRenderables(m_canvas->getCursorPosWC());
 
             if(!picked.size()) { return "" ;}
             
-            tie(renderable, attrs) = picked[0];
+            auto [renderable, attrs] = picked[0];
 
 			renderable->ensureVAO();
 
-			renderable->render(m_canvas);
+			renderable->render(m_canvas, POST_G_BUFFER);
 
             string attrsStr = attrs->toString();
 
@@ -222,6 +288,14 @@ string GeoClient::doPicking(const char mode, const dvec4 & pos) const
             }
             
             return attrsStr;
+        }
+        case GUI::PICK_MODE_POINT:
+        {
+            auto [renderable, attrs] = pickPointRenderable(m_canvas->getCursorPosWC());
+
+            if (!attrs) { return ""; }
+
+            return attrs->toString();
         }
     }
 

@@ -26,12 +26,11 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
-#include <websocketpp/config/asio_no_tls.hpp>
-#include <websocketpp/server.hpp>
 #include <webAsmPlay/Types.h>
-#include <geoServer/GeoServerBase.h>
 
-class GeoServer : public GeoServerBase
+class Bubble;
+
+class GeoServer
 {
 public:
 
@@ -40,26 +39,12 @@ public:
 
     std::string addGeoFile(const std::string & geomFile);
 
-    void start();
-
     std::string saveGeoFile(const std::string & fileName);
 
     void createNavigationPaths(const std::vector<AttributedLineString> & lineStrings);
 
 private:
     
-    typedef websocketpp::server<websocketpp::config::asio> Server;
-
-    typedef Server::message_ptr message_ptr;
-
-    Server m_serverEndPoint;
-
-    static void onMessage(GeoServer * server, websocketpp::connection_hdl hdl, message_ptr msg);
-
-#ifdef __USE_GDAL__
-    std::string addGdalSupportedFile(const std::string & gdalFile);
-#endif
-
     std::string addOsmFile(const std::string & osmFile);
 
     std::string _addGeoFile(const std::string & geoFile);
@@ -78,4 +63,6 @@ private:
     double m_boundsMaxY;
 
     glm::dmat4 m_trans;
+
+	std::vector<Bubble *> m_bubbles;
 };

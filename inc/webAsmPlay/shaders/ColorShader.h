@@ -25,13 +25,15 @@
 */
 #pragma once
 
+#include <glm/vec4.hpp>
 #include <webAsmPlay/shaders/Shader.h>
 
 class ColorShader : public Shader
 {
 public:
 
-    ColorShader();
+    ColorShader(const ShouldRenderFunctor & shouldRenderFunctor);
+
     ~ColorShader();
 
     static void ensureShader();
@@ -41,6 +43,15 @@ public:
     void bind(  Canvas      * canvas,
                 const bool    isOutline,
                 const size_t  renderingStage = 0) override;
+
+	void bind(	const glm::mat4 & model,
+				const glm::mat4 & view,
+				const glm::mat4 & projection,
+				const bool		  isOutline,
+				const size_t	  renderingStage) override;
+
+	void bind(	const glm::mat4 & MVP,
+				const bool		  isOutline);
 
 private:
 

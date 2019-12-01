@@ -30,7 +30,7 @@
 
 using namespace std;
 
-void (*debugLoggerFunc)(const std::string & file, const size_t line, const std::string & message) = NULL;
+void (*debugLoggerFunc)(const std::string & file, const size_t line, const std::string & message) = nullptr;
 
 /*
 void dmessCallback(const string & file, const size_t line, const string & message)
@@ -105,8 +105,6 @@ int main(const int argc, char ** argv)
     GeoServer s;
     
     s.addGeoFile(argv[1]);
-
-    s.start();
 
     return 0;
 }

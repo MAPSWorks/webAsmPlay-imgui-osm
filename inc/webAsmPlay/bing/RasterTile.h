@@ -1,4 +1,4 @@
-    /**
+﻿/**
  ╭━━━━╮╱╱╱╱╱╱╱╱╱╭╮╱╭━━━╮╱╱╱╱╱╱╭╮
  ┃╭╮╭╮┃╱╱╱╱╱╱╱╱╱┃┃╱┃╭━╮┃╱╱╱╱╱╱┃┃
  ╰╯┃┃╰╯╭━╮╭━━╮╭╮┃┃╱┃┃╱╰╯╭━━╮╭━╯┃╭━━╮
@@ -21,40 +21,55 @@
 
   \author Matthew Tang
   \email trailcode@gmail.com
-  \copyright 2018
+  \copyright 2019
 */
+
 #pragma once
 
-#include <glm/vec4.hpp>
-#include <JSONValue.h>
+#include <atomic>
+#include <mutex>
+#include <glm/vec2.hpp>
 #include <webAsmPlay/OpenGL_Util.h>
 
-class ColorSymbology
+class Renderable;
+
+class RasterTile
 {
 public:
 
-    static ColorSymbology * getInstance(const std::string & name);
+	RasterTile(const glm::dvec2& center, const glm::dvec2& widthHeight, const size_t level);
 
-    GLuint getTextureID();
+	~RasterTile();
 
-    glm::vec4 setColor		(const size_t index, const glm::vec4 & color);
-    glm::vec4 getColor		(const size_t index);
-    glm::vec4 & getColorRef	(const size_t index);
+	static RasterTile* getTile(const glm::dvec2& center, const size_t level, const size_t accessTime);
 
-    void loadState(const JSONObject & dataStore);
+	static size_t pruneTiles();
 
-    void saveState(JSONObject & dataStore);
+	static size_t getNumTiles();
 
-private:
+	RasterTile* getParentTile(const size_t accessTime) const;
 
-    ColorSymbology(const std::string & name);
-    ~ColorSymbology();
+	bool textureReady() const;
 
-    const std::string m_name;
+	const glm::dvec2	m_center;
+	const glm::dvec2	m_widthHeight;
+	const size_t		m_level;
 
-    GLuint m_colorTexture = 0;
+	std::atomic_bool m_loading = { false };
 
-    glm::vec4 m_colors[32];
+	std::atomic_bool m_stillNeeded = { true };
 
-    bool m_colorTextureDirty = true;
+	Renderable* m_renderable = nullptr;
+
+	static GLuint s_NO_DATA;
+
+	std::atomic<GLuint> m_textureID = { 0 };
+
+	GLuint64 m_handle = 0;
+
+	bool m_textureResident = false;
+
+	size_t m_lastAccessTime = 0;
+
+	static std::atomic_size_t s_desiredMaxNumTiles;
 };

@@ -29,16 +29,18 @@
 #include <webAsmPlay/Util.h>
 #include <webAsmPlay/FrameBuffer.h>
 #include <webAsmPlay/canvas/TrackBallInteractor.h>
-#include <webAsmPlay/ColorSymbology.h>
 #include <webAsmPlay/geom/GeosUtil.h>
 #include <webAsmPlay/geom/Frustum.h>
 #include <webAsmPlay/renderables/DeferredRenderable.h>
 #include <webAsmPlay/renderables/RenderableLineString.h>
 #include <webAsmPlay/renderables/RenderableMesh.h>
+#include <webAsmPlay/renderables/RenderableModelInstanced.h>
 #include <webAsmPlay/renderables/RenderablePoint.h>
 #include <webAsmPlay/renderables/RenderablePolygon.h>
 #include <webAsmPlay/renderables/RenderableBingMap.h>
+#include <webAsmPlay/renderables/RenderableText.h>
 #include <webAsmPlay/renderables/SkyBox.h>
+#include <webAsmPlay/shaders/ColorSymbology.h>
 #include <webAsmPlay/shaders/ColorDistanceShader.h>
 #include <webAsmPlay/shaders/ColorDistanceDepthShader3D.h>
 #include <webAsmPlay/shaders/SsaoShader.h>
@@ -55,19 +57,19 @@ using namespace geos::geom;
 
 namespace
 {
-    std::vector<Canvas *> instances;
+    std::vector<Canvas *> a_instances;
+
+	GLuint a_uniforms_buffer = 0;
 
 	struct uniforms_block
 	{
-		mat4 model;
-		mat4 view;
-		mat4 proj;
-		mat4 modelView;
-		mat4 modelViewProj;
+		mat4 m_model;
+		mat4 m_view;
+		mat4 m_proj;
+		mat4 m_modelView;
+		mat4 m_modelViewProj;
 	};
 }
-
-GLuint          uniforms_buffer = 0;
 
 Canvas::Canvas( const bool   useFrameBuffer,
                 const vec4 & clearColor) :  m_useFrameBuffer		(useFrameBuffer),
@@ -75,11 +77,11 @@ Canvas::Canvas( const bool   useFrameBuffer,
                                             m_trackBallInteractor	(new TrackBallInteractor()),
 											m_frustum				(new Frustum())
 {
-    instances.push_back(this);
+    a_instances.push_back(this);
 
-	glGenBuffers(1, &uniforms_buffer);
-	glBindBuffer(GL_UNIFORM_BUFFER,  uniforms_buffer);
-	glBufferData(GL_UNIFORM_BUFFER, sizeof(uniforms_block), NULL, GL_DYNAMIC_DRAW);
+	glGenBuffers(1,					&a_uniforms_buffer);
+	glBindBuffer(GL_UNIFORM_BUFFER,  a_uniforms_buffer);
+	glBufferData(GL_UNIFORM_BUFFER,  sizeof(uniforms_block), nullptr, GL_DYNAMIC_DRAW);
 }
 
 Canvas::~Canvas()
@@ -158,18 +160,18 @@ void Canvas::updateMVP()
 
 	m_frustum->set(m_currMVP.m_MVP);
 
-	glBindBufferBase(GL_UNIFORM_BUFFER, 0, uniforms_buffer);
+	glBindBufferBase(GL_UNIFORM_BUFFER, 0, a_uniforms_buffer);
 
-	uniforms_block * block = (uniforms_block *)glMapBufferRange(GL_UNIFORM_BUFFER,
-																0,
-																sizeof(uniforms_block),
-																GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
+	auto block = (uniforms_block *)glMapBufferRange(GL_UNIFORM_BUFFER,
+													0,
+													sizeof(uniforms_block),
+													GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_BUFFER_BIT);
 
-	block->model			= m_currMVP.m_model;
-	block->view				= m_currMVP.m_view;
-	block->proj				= m_currMVP.m_projection;
-	block->modelView		= m_currMVP.m_MV;
-	block->modelViewProj	= m_currMVP.m_MVP;
+	block->m_model			= m_currMVP.m_model;
+	block->m_view			= m_currMVP.m_view;
+	block->m_proj			= m_currMVP.m_projection;
+	block->m_modelView		= m_currMVP.m_MV;
+	block->m_modelViewProj	= m_currMVP.m_MVP;
 
 	glUnmapBuffer(GL_UNIFORM_BUFFER);
 }
@@ -243,36 +245,35 @@ GLuint Canvas::render()
 	glClearBufferfv(GL_COLOR, 1, black);
 	glClearBufferfv(GL_DEPTH, 0, &one);
 
-	ColorDistanceDepthShader3D	::getDefaultInstance()->setColorSymbology(ColorSymbology::getInstance("defaultMesh"));
-	ColorDistanceShader			::getDefaultInstance()->setColorSymbology(ColorSymbology::getInstance("defaultPolygon"));
+	for(const auto r : m_rasters)	{ r->render(this, G_BUFFER) ;}
+	for(const auto r : m_polygons)	{ r->render(this, G_BUFFER) ;}
+    for(const auto r : m_meshes)	{ r->render(this, G_BUFFER) ;}
 
-	for(const auto r : m_rasters)	{ r->render(this, 0) ;}
-	for(const auto r : m_polygons)	{ r->render(this, 1) ;}
-    for(const auto r : m_meshes)	{ r->render(this, 1) ;}
+	m_drawBuffers = {{ GL_COLOR_ATTACHMENT0 }};
 
-	{
-		vector<GLenum> m_drawBuffers({ GL_COLOR_ATTACHMENT0 });
+	glDrawBuffers(m_drawBuffers.size(), &m_drawBuffers[0]);
 
-		glDrawBuffers(m_drawBuffers.size(), &m_drawBuffers[0]);
-	}
-
-    for(const auto r : m_lineStrings)         { r->render(this, 0) ;}
-    for(const auto r : m_points)              { r->render(this, 0) ;}
-    for(const auto r : m_deferredRenderables) { r->render(this, 0) ;} 
-    for(const auto r : m_meshes)              { r->render(this, 0) ;}
+	for(const auto r : m_polygons)			  { r->render(this, POST_G_BUFFER) ;}
+    for(const auto r : m_lineStrings)         { r->render(this, POST_G_BUFFER) ;}
+    for(const auto r : m_points)              { r->render(this, POST_G_BUFFER) ;}
+    for(const auto r : m_deferredRenderables) { r->render(this, POST_G_BUFFER) ;} 
+    for(const auto r : m_meshes)              { r->render(this, POST_G_BUFFER) ;}
+	for(const auto r : m_models)              { r->render(this, POST_G_BUFFER) ;}
+	for(const auto r : m_textLabels)		  { r->render(this, POST_G_BUFFER) ;}
 	
 	m_gBuffer->unbind();
 	
 	if(m_skyBox) { m_skyBox->render(this) ;}
 
+	if(m_useFrameBuffer) { m_frameBuffer->bind() ;}
+
 	SsaoShader::getDefaultInstance()->setColorTextureID			(m_gBuffer->getTextureID(0));
 	SsaoShader::getDefaultInstance()->setNormalDepthTextureID	(m_gBuffer->getTextureID(1));
 
-	SsaoShader::getDefaultInstance()->bind(this, false, 0);
+	SsaoShader::getDefaultInstance()->bind(this, false, POST_G_BUFFER);
 
-	glDisable(GL_DEPTH_TEST);
-	
 	glBindVertexArray(quad_vao);
+
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
 
     return postRender();
@@ -281,6 +282,8 @@ GLuint Canvas::render()
 GLuint Canvas::postRender()
 {
 	renderCursor(m_cursorPosWC);
+
+	glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 	if(m_useFrameBuffer) { return m_frameBuffer->getTextureID() ;}
 
@@ -324,6 +327,15 @@ bool Canvas::setWantMouseCapture(const bool wantMouseCapture) { return m_wantMou
 void Canvas::onMouseButton(GLFWwindow * window, const int button, const int action, const int mods)
 {
     if(!m_enabled) { return ;}
+
+	switch(button)
+	{
+		case GLFW_MOUSE_BUTTON_LEFT: 
+
+		for(const auto & listener : m_leftClickListeners) { listener(m_cursorPosWC) ;}
+
+		break;
+	};
 }
 
 void Canvas::onMousePosition(GLFWwindow * window, const vec2 & mousePos)
@@ -350,6 +362,8 @@ void Canvas::onMousePosition(GLFWwindow * window, const vec2 & mousePos)
     const double t = -dot(eye, n) / dot(rayWor, n);
 
     m_cursorPosWC = eye + rayWor * t;
+
+	for(const auto & listener : m_mouseMoveListeners) { listener(m_cursorPosWC) ;}
 }
 
 void Canvas::onMouseScroll(GLFWwindow * window, const vec2 & mouseScroll)
@@ -375,6 +389,16 @@ void Canvas::onMouseScroll(GLFWwindow * window, const vec2 & mouseScroll)
     m_trackBallInteractor->update();
 }
 
+void Canvas::addLeftClickListener(const function<void(const dvec3 & posWC)> & listener)
+{
+	m_leftClickListeners.push_back(listener);
+}
+
+void Canvas::addMouseMoveListener(const std::function<void(const glm::dvec3 & posWC)> & listener)
+{
+	m_mouseMoveListeners.push_back(listener);
+}
+
 void Canvas::onKey(GLFWwindow * window, const int key, const int scancode, const int action, const int mods)
 {
     if(!m_enabled || !m_wantMouseCapture) { return ;}
@@ -391,10 +415,10 @@ void Canvas::onKey(GLFWwindow * window, const int key, const int scancode, const
             {
                 double xPos;
                 double yPos;
-                glfwGetCursorPos(window, &xPos, &yPos);
-                m_lastShiftKeyDownMousePos = ivec2(xPos, yPos);
 
-                //dmess("lastShiftKeyDownMousePos " << lastShiftKeyDownMousePos);
+                glfwGetCursorPos(window, &xPos, &yPos);
+
+                m_lastShiftKeyDownMousePos = ivec2(xPos, yPos);
             }
 
             break;
@@ -420,12 +444,14 @@ Renderable * Canvas::addRenderable(Renderable * renderiable, const bool ensureVA
 		GUI::guiSync([renderiable]() { renderiable->ensureVAO(); }, true);
 	}
 
-    if(dynamic_cast<DeferredRenderable   *>(renderiable)) { return addRenderable(m_deferredRenderables, renderiable) ;}
-    if(dynamic_cast<RenderableLineString *>(renderiable)) { return addRenderable(m_lineStrings,         renderiable) ;}
-    if(dynamic_cast<RenderablePolygon    *>(renderiable)) { return addRenderable(m_polygons,            renderiable) ;}
-    if(dynamic_cast<RenderablePoint      *>(renderiable)) { return addRenderable(m_points,              renderiable) ;}
-    if(dynamic_cast<RenderableMesh       *>(renderiable)) { return addRenderable(m_meshes,              renderiable) ;}
-    if(dynamic_cast<RenderableBingMap    *>(renderiable)) { return addRenderable(m_rasters,             renderiable) ;}
+    if(dynamic_cast<DeferredRenderable			*>(renderiable)) { return addRenderable(m_deferredRenderables, renderiable) ;}
+    if(dynamic_cast<RenderableLineString		*>(renderiable)) { return addRenderable(m_lineStrings,         renderiable) ;}
+    if(dynamic_cast<RenderablePolygon			*>(renderiable)) { return addRenderable(m_polygons,            renderiable) ;}
+    if(dynamic_cast<RenderablePoint				*>(renderiable)) { return addRenderable(m_points,              renderiable) ;}
+    if(dynamic_cast<RenderableMesh				*>(renderiable)) { return addRenderable(m_meshes,              renderiable) ;}
+    if(dynamic_cast<RenderableBingMap			*>(renderiable)) { return addRenderable(m_rasters,             renderiable) ;}
+	if(dynamic_cast<RenderableModelInstanced	*>(renderiable)) { return addRenderable(m_models,              renderiable) ;}
+	if(dynamic_cast<RenderableText				*>(renderiable)) { return addRenderable(m_textLabels,          renderiable) ;}
 
     dmessError("Error! Implement!");
     
@@ -457,6 +483,8 @@ vector<Renderable *> Canvas::getRenderiables() const
     ret.insert(ret.end(), m_polygons.begin(),     m_polygons.end());
     ret.insert(ret.end(), m_meshes.begin(),       m_meshes.end());
     ret.insert(ret.end(), m_rasters.begin(),      m_rasters.end());
+	ret.insert(ret.end(), m_models.begin(),       m_models.end());
+	ret.insert(ret.end(), m_textLabels.begin(),   m_textLabels.end());
 
     return ret;
 }
@@ -467,6 +495,8 @@ const list<Renderable *> & Canvas::getPolygonsRef()             const { return m
 const list<Renderable *> & Canvas::getMeshesRef()               const { return m_meshes               ;}
 const list<Renderable *> & Canvas::getDeferredRenderablesRef()  const { return m_deferredRenderables  ;}
 const list<Renderable *> & Canvas::getRastersRef()              const { return m_rasters              ;}
+const list<Renderable *> & Canvas::getModelsRef()               const { return m_models               ;}
+const list<Renderable *> & Canvas::getTextLablesRef()			const { return m_textLabels           ;}
 
 vec4 Canvas::setClearColor(const vec4 & clearColor) { return this->m_clearColor = clearColor ;}
 
@@ -497,7 +527,7 @@ bool Canvas::getEnabled()							const	{ return m_enabled				;}
 double Canvas::getPerspectiveFOV()					const	{ return m_perspectiveFOV		;}
 double Canvas::setPerspectiveFOV(const double FOV)			{ return m_perspectiveFOV = FOV ;}
 
-vector<Canvas *> Canvas::getInstances()						{ return instances				;}
+vector<Canvas *> Canvas::getInstances()						{ return a_instances			;}
 
 dvec3 Canvas::getCursorPosWC()						const	{ return m_cursorPosWC			;}
 

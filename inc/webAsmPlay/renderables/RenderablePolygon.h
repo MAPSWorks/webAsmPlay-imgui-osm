@@ -25,8 +25,10 @@
 */
 #pragma once
 
+#include <boost/geometry.hpp>
 #include <webAsmPlay/OpenGL_Util.h>
 #include <webAsmPlay/geom/Tessellation.h>
+#include <webAsmPlay/geom/BoostGeomUtil.h>
 #include <webAsmPlay/renderables/Renderable.h>
 
 namespace geos
@@ -38,27 +40,39 @@ namespace geos
     }
 }
 
-class VertexArrayObject;
-
 class RenderablePolygon : public Renderable
 {
 public:
 
     ~RenderablePolygon();
 
-    static Renderable * create( const geos::geom::Polygon       * poly,
-                                const glm::dmat4                & trans         = glm::dmat4(1.0),
-                                const size_t                      symbologyID   = 0,
-                                const AABB2D                    & boxUV         = AABB2D());
+    static Renderable * create( const geos::geom::Polygon			* poly,
+                                const glm::dmat4					& trans         = glm::dmat4(1.0),
+                                const size_t						  symbologyID   = 0,
+                                const AABB2D						& boxUV         = AABB2D(),
+								const bool							  swapUV_Axis   = false);
 
-    static Renderable * create( const geos::geom::MultiPolygon  * multyPoly,
-                                const glm::dmat4                & trans         = glm::dmat4(1.0),
-                                const size_t                      symbologyID   = 0,
-                                const AABB2D                    & boxUV         = AABB2D());
+    static Renderable * create( const geos::geom::MultiPolygon		* multyPoly,
+                                const glm::dmat4					& trans         = glm::dmat4(1.0),
+                                const size_t						  symbologyID   = 0,
+                                const AABB2D						& boxUV         = AABB2D(),
+								const bool							  swapUV_Axis   = false);
 
-    static Renderable * create( const ColoredGeometryVec        & polygons,
-                                const glm::dmat4                & trans         = glm::mat4(1.0),
-                                const bool                        showProgress  = false);
+    static Renderable * create( const ColoredGeometryVec			& polygons,
+                                const glm::dmat4					& trans         = glm::mat4(1.0),
+                                const bool							  showProgress  = false);
+
+	static Renderable * create( const boostGeom::Polygon			& polygon,
+								const glm::dmat4					& trans         = glm::dmat4(1.0),
+                                const size_t						  symbologyID   = 0,
+                                const AABB2D						& boxUV         = AABB2D(),
+								const bool							  swapUV_Axis   = false);
+
+	static Renderable * create( const boostGeom::MultiPolygon		& multiPoly,
+								const glm::dmat4					& trans         = glm::dmat4(1.0),
+                                const size_t						  symbologyID   = 0,
+                                const AABB2D						& boxUV         = AABB2D(),
+								const bool							  swapUV_Axis   = false);
 
     void render(Canvas * canvas, const size_t renderStage = 0) override;
 
@@ -67,7 +81,5 @@ public:
 private:
 
     RenderablePolygon(VertexArrayObject * vertexArrayObject);
-
-    VertexArrayObject * m_vertexArrayObject;
 }; 
 

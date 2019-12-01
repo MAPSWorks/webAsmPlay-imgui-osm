@@ -3,58 +3,36 @@ WebAsmPlay
 ----------------------
 
 WebAsmPlay was initially developed to evaluate web application development using Emscripten.
+Currently the Emscripten part is not working. Hopefully in the future it will be. 
 
-Currently a handful of C++ libraries have been compiled with Emscripten in this project to run in the browser
-and run natively. The idea is to test a cross platform development environment where an application
-is developed and debugged both as a web application and a native application.
-Another goal is to discover the limitations and capabilities of Emscripten web application development.
-Cross platform development is achieved using cmake.
+[![Alt text](https://img.youtube.com/vi/s0unMIQUs1U/0.jpg)](https://www.youtube.com/watch?v=s0unMIQUs1U)<br/>
+YouTube video of current native development version.
 
-![Screenshot](docs/webAsmPlay.jpg)
+To see the last Emscripten build working: https://trailcode.github.io/ZombiGeoSim/index.html Be patient to let it load.
+Hold down the "alt" key and move the mouse to pan. Hold down the "shift" key and move the mouse to rotate the camera.
 
 The current goal of this project is morphing into a Real-Time Strategy game using
 OpenSteer (http://opensteer.sourceforge.net/) and OpenStreetMap (https://www.openstreetmap.org)
-To provide a starting point for non player character(NPC) zombie bots who roam Open Street Map cities.
-NPC positions will be calculated on a server and the client application running in the browser or natively
-can query bot positions and states for the given viewport. The server will also be responsible for geometry
-generalization, bot AI, navigation graphs generated from Open Street Map data and state persistence.
-In the near future this project is going to be renamed to ZombieGeoSim. 
-
+ 
 ### Features
 
 * Ability to run the client in a supported web browser or as a native client. 
     * Object Picking where the picked object under the mouse cursor is highlighted and it's attributes are displayed.
-    * Skybox Renderer.
+    * Skybox Render.
     * Path finding over linear features.
     * Autonomous zombies wonder on paths while steering to avoid each other.
     * Multiple camera modes: TrackBall and zombie tracking camera mode.
     * User definable symbology color rendering supporting transparency for both fill and outlines.
         * Camera near and far symbology can be defined for each attribute allowing for interpolated symbology blending proportional to object to camera distance.
-    * Ability to render 3D buildings. 
+    * Ability to render 3D buildings.
+    * Projection of BingMaps raster tiles over scene geometry. 
+    * Create and play camera animation paths.
 
 * Geometry Server
     * ESRI Shapefile and OpenStreetMap XML GIS formats with linestring and polygon ingestion along with attribution.
     * Fast custom attributed transport protocol.
     * Ensures linear feature topology correctness. Breaks linestrings at intersections and connections. Removes overlapping linestrings.
-
-### Dependencies
-
-Unfortunately during development notes on build depends were not tracked. Development is currently
-being done on OSX. Macports (https://www.macports.org/) and Brew (https://brew.sh/) is being used to
-install third party dependencies. C++ 14 is being used. Currently emscripten is using clang 5.0 which
-does not fully support c++ 17. On windows it is recommended to use scoop (https://scoop.sh) to install third party requirements
-
-* Cmake: https://cmake.org
-* Emscripten: http://kripken.github.io/emscripten-site
-* Glfw3: https://www.glfw.org/
-* Glew: http://glew.sourceforge.net/
-* Boost: https://www.boost.org/
-* Websocketpp: https://www.zaphoyd.com/websocketpp
-* Gdal: https://www.gdal.org/ [[Must be built with Geos]]  For Windows: http://www.gisinternals.com
-* Geos: https://trac.osgeo.org/geos
-* SDL2_image: https://www.libsdl.org/
-* Intel TBB: https://www.threadingbuildingblocks.org/
-* Visual C++ Redistributable for Visual Studio 2012 Update 4: https://www.microsoft.com/en-us/download/details.aspx?id=30679
+    * Discover polygon topographical relations. Child(contained), parent, and neighbors. 
 
 ### Sources
 
@@ -72,149 +50,31 @@ and allow C++ 17 compilation:
 * Histogram: https://github.com/HDembinski/histogram
 * SimpleJSON: https://github.com/MJPA/SimpleJSON
 
-### Art and Data
-* https://www.iconfinder.com/iconsets/32x32-free-design-icons
-
 #### Building
 
+The build system is based on CMake. 
 
-The web client:
+### OSX
 
-``` Bash
-$ git clone https://github.com/trailcode/webAsmPlay.git
-$ cd webAsmPlay
-$ mkdir buildEmscripten
-$ cd buildEmscripten
-$ emconfigure cmake ..
-$ emmake make -j8
-```
+* brew install boost
+* brew install glfw3
+    * brew link glfw
+* brew install expat keg-only does not link in /usr/local
+* brew install assimp
+* brew install sdl2_image
 
-The native client:
+#### Bugs
 
-``` Base
-$ cd ..
-$ mkdir buildNative
-$ cd buildNative
-$ cmake ..
-$ make -j8
-```
+* ~~dmessError does not flush output~~
 
-The server:
+#### Todo
 
-``` Base
-cd ..
-mkdir buildServer
-cd buildServer
-cmake ../GeoServer
-make -j8
-```
+* Replace curlUtil::BufferStruct with a std::pair
+* Remove the model component from the canvas, simplify the shaders.
 
-#### Running
+#### Notes
 
-Start the server:
-
-``` Bash
-cd ..
-cd buildServer
-./geoServer &
-```
-
-Run the web client:
-
-``` Bash
-cd ..
-cd buildEmscripten
-emrun --browser chrome index.html
-```
-
-// TODO The instructions are out of date!
-You will need to move the the matrix panels out of the way and resize the
-scene window panel. With the mouse in the scene window scrolling with the mouse
-zooms in and out. Holding down the left shift key and moving the mouse rotates
-the camera around the object. Holding down the left alt or option key pans the
-camera on the XY plane.
-
-Run the native client:
-
-``` Bash
-cd ..
-cd buildNative
-./webAsmPlay
-```
-
-### Notes
-
-No notes.
-
-### Ideas
-
-* Create geometry summary for the current viewport. Pie charts representing the area of land use, surface type, surface color, etc
-  Also include roads, paths, and other linear features in this.
-
-* Building to other surface ratios, roads, paths, grass, water, etc
-
-* Try to classify the viewport to different attributes such as social economics, political distribution, city type, etc.
-  Will require training.
-
-* Split data into different layers. Possible layers could be transportation, linear feature infrastructure, rivers, etc. The objective
-  is to separate linear features from features with area. The layers will be rendered to different offscreen buffers allowing for image
-  processing.
-  
-    * ~~One filter to test would be setting the transparency depending on the distance from the camera.~~
-    * Another filter would be to set the transparency based on the density of the features of similar color local to the current screen pixel.
-      This also might be a start at generalization.
-    * Transparency shader based on feature area or length.
-      
-* ~~Interpolate line string color in relation to the distance to the camera.~~
-
-* Auto parse shader source to determine uniforms and attributes.
-    * ~~Or better, pass into shader name and location reference pairs.~~
-
-* Determine topological relationships of the polygonal features in the GeoServer.
-  This will allow associating OSM building parts and extruding them on top of their parent geometry.
-
-* Implement movable clip planes.
-
-### TODO
-
-* Make geometric terminology consistent with Geos.
-* Fix dmess for GeoServer
-* ~~Bring Emscripten ImGUI up to date with native version~~.
-* Present error if cannot connect to server
-* Move to a newer geos. 3.8.0Dev seems to have more functions.
-* ~~Make a third party directory.~~
-* Make a project Talent Stack Document/Panel.
-* ~~Remove fill and outline color arguments in Renderable, RenderablePolygon, etc.~~
-* Make tessellation templated.
-* Generate OpenGL vertex buffers in the GeoServer.
-* Assign default values of class member variables in header file. Must be a C++ 11 or C++ 14 feature.
-* All renderables should use the VertexArrayObject class. This will be a step in using multiple GPU interfaces such as Vulkan, Direct3D, or Metal
-* Zombie bots need to avoid walking through building walls.
-* Make a unified camera class.
-* Move OpenSteer Vec3 objects to glm::dvec objects.
-* Detect OSM building polygons which have the same base but different heights. Use only the one with the smallest height.
-    * Investigate this some more.
-* Add overrides keywords. 
-* Experiment with compute shaders for updating bot positions. 
-* Add VLD and check for memory leaks.
-
-### Bugs
-
-* Holding down shift and moving outside the Geos test panel keeps it as if the shift key is still held down when the mouse is brought back in the panel.
-* Camera still has a bug with window resizing and trackball. Seems to only happen in emscripten build.
-* Upgraded OSX, glfw is having problems now :( Happened after upgrading to xcode 10
-    * https://github.com/glfw/glfw/issues/1337
-    * https://www.syntaxbomb.com/index.php?topic=4927.0
-* Bots seem to get to the end of the path, but do not detect they are there and just spin around the end. 
-* Geos Test Canvas is broken.
-* Scrolling in Bing Maps framebuffer crashes.
+* https://docs.microsoft.com/en-us/bingmaps/articles/getting-streetside-tiles-from-imagery-metadata
 
 
-## To Read
-http://ogldev.atspace.co.uk/www/tutorial45/tutorial45.html
 
-https://wiki.openstreetmap.org/wiki/OpenStreetCam
-
-https://github.com/dkniffin/personal-website/blob/master/_drafts/2014-11-24-streetside-api.md
-
-https://docs.microsoft.com/en-us/bingmaps/articles/bing-maps-tile-system

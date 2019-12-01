@@ -28,13 +28,16 @@
 #include <future>
 #include <chrono>
 #include <thread>
+#include <glm/mat4x4.hpp>
 #include <webAsmPlay/GUI/ImguiInclude.h>
 #include <webAsmPlay/Types.h>
 
 class Canvas;
 class GeosTestCanvas;
+class BubbleFaceTestCanvas;
 class OpenSteerCanvas;
 class AnimationCanvas;
+class ModelViewerCanvas;
 class SkyBox;
 class GeoClient;
 
@@ -54,9 +57,12 @@ public:
         PICK_MODE_LINESTRING,
         PICK_MODE_POLYGON_SINGLE,
         PICK_MODE_POLYGON_MULTIPLE,
+        PICK_MODE_POINT,
         PICK_MODE_POLYGON_CHILDREN,
         SET_PATH_START_POINT,
         FIND_PATH,
+		PICK_BING_TILE,
+		PICK_STREET_SIDE_BUBBLE,
     };
 
     enum
@@ -77,10 +83,13 @@ public:
     static bool  s_renderSettingsRenderLinearFeatures;
     static bool  s_renderSettingsRenderSkyBox;
     static bool  s_renderSettingsRenderBingMaps;
+    static bool  s_renderSettingsRenderModels;
 	static float s_lineWidthRender;
 
     static void setupCallbacks(GLFWwindow* window);
     static void initOpenGL();
+	static void initBingTileSystemPanel(const glm::dmat4 & trans);
+	static void initBingStreetSidePanel(const glm::dmat4 & trans);
     static void mainLoop(GLFWwindow * window);
     static void refresh();
 
@@ -165,6 +174,7 @@ private:
     static void renderSettingsPanel();
     static void attributePanel(const std::string & attrsStr);
     static void geosTestPanel();
+	static void boostGeomTestPanel();
     static void GUI_Settings_Panel();
     static void symbologyPanel();
     static void openSteerTestPanel();
@@ -175,6 +185,9 @@ private:
 	static void bingMapsFrameBufferDebugPanel();
 	static void normalFrameBufferDebugPanel();
 	static void animationPanel();
+	static void modelViewerPanel();
+	static void streetSidePanel();
+	static void bubbleFaceTestPanel();
 
     static void showHelpMarker(const char* desc);
 
@@ -187,7 +200,8 @@ private:
     static void windowFocusCallback     (GLFWwindow * window, int focused);
     static void cursorEnterCallback     (GLFWwindow * window, int entered);
     
-    static bool s_showSceneViewPanel;
+    static bool s_showGeosTestPanel;
+	static bool s_showBoostGeomTestPanel;
     static bool s_showPerformancePanel;
     static bool s_showRenderSettingsPanel;
     static bool s_showLogPanel;
@@ -202,15 +216,20 @@ private:
 	static bool s_showBingMapsFrameBufferDebugPanel;
 	static bool s_showNormalFrameBufferDebugPanel;
 	static bool s_showAnimationPanel;
+	static bool s_showModelViewerPanel;
+	static bool s_showStreetSidePanel;
+	static bool s_showBubbleFaceTestPanel;
 
     static GLFWwindow * s_mainWindow;
 
-    static GeosTestCanvas  * s_geosTestCanvas;
-    static OpenSteerCanvas * s_openSteerCanvas;
-	static AnimationCanvas * s_animationCanvas;
-    static Canvas          * s_canvas;
-    static SkyBox          * s_skyBox;
-    static GeoClient       * s_client;
+    static GeosTestCanvas		* s_geosTestCanvas;
+    static OpenSteerCanvas		* s_openSteerCanvas;
+	static AnimationCanvas		* s_animationCanvas;
+	static ModelViewerCanvas	* s_modelViewerCanvas;
+	static BubbleFaceTestCanvas * s_bubbleFaceTestCanvas;
+    static Canvas				* s_canvas;
+    static SkyBox				* s_skyBox;
+    static GeoClient			* s_client;
 
     static std::vector<Canvas *> s_auxCanvases;
 

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 2.8.9)
 project(webAsmPlay)
-#set(default_build_type "Release")
-set(CMAKE_BUILD_TYPE Debug)
+set(default_build_type "Release")
+#set(CMAKE_BUILD_TYPE Debug)
 
 set(USE_FOLDERS ON)
 
@@ -9,10 +9,9 @@ set(Boost_USE_STATIC_LIBS       OFF)
 set(Boost_USE_MULTITHREADED     ON)
 set(Boost_USE_STATIC_RUNTIME    OFF)
 
-set(EXPAT_INSTALL "/usr/local/Cellar/expat/2.2.6") # OSX
-
-
 if(MSVC_VERSION)
+
+    set(BOOST_VERSION "1.69.0.0")
 
 	find_program(NUGET nuget)
 	if(NOT NUGET)
@@ -20,32 +19,36 @@ if(MSVC_VERSION)
 	else()
 
 		execute_process(COMMAND ${NUGET} install vii.SDL2_image				-Version 2.0.3		-o thirdParty)
-		execute_process(COMMAND ${NUGET} install boost_filesystem-vc141		-Version 1.69.0.0	-o thirdParty)
-		execute_process(COMMAND ${NUGET} install boost_random-vc141			-Version 1.69.0.0	-o thirdParty)
-		execute_process(COMMAND ${NUGET} install boost_date_time-vc141		-Version 1.69.0.0	-o thirdParty)
-		execute_process(COMMAND ${NUGET} install boost_regex-vc141			-Version 1.69.0.0	-o thirdParty)
-		execute_process(COMMAND ${NUGET} install boost_system-vc141			-Version 1.69.0.0	-o thirdParty)
+		
+        execute_process(COMMAND ${NUGET} install boost_filesystem-vc141		-Version ${BOOST_VERSION}	-o thirdParty)
+		execute_process(COMMAND ${NUGET} install boost_random-vc141			-Version ${BOOST_VERSION}	-o thirdParty)
+		execute_process(COMMAND ${NUGET} install boost_date_time-vc141		-Version ${BOOST_VERSION}	-o thirdParty)
+		execute_process(COMMAND ${NUGET} install boost_regex-vc141			-Version ${BOOST_VERSION}	-o thirdParty)
+		execute_process(COMMAND ${NUGET} install boost_system-vc141			-Version ${BOOST_VERSION}	-o thirdParty)
+
 		execute_process(COMMAND ${NUGET} install curl-vc141-dynamic-x86_64	-Version 7.59.0		-o thirdParty)
 		execute_process(COMMAND ${NUGET} install glfw						-Version 3.3.0.1	-o thirdParty)
 		execute_process(COMMAND ${NUGET} install unofficial-flayan-glew		-Version 2.1.0		-o thirdParty)
 		execute_process(COMMAND ${NUGET} install tbb_oss					-Version 9.107.0	-o thirdParty)
 		execute_process(COMMAND ${NUGET} install expat.v140					-Version 2.2.6		-o thirdParty)
+		execute_process(COMMAND ${NUGET} install assimp.v140				-Version 3.2.0		-o thirdParty)
 	
-		file(GLOB boost_files	${webAsmPlay_BINARY_DIR}/thirdParty/boost_filesystem-vc141.1.69.0.0/lib/native/*
-								${webAsmPlay_BINARY_DIR}/thirdParty/boost_system-vc141.1.69.0.0/lib/native/*
-								${webAsmPlay_BINARY_DIR}/thirdParty/boost_random-vc141.1.69.0.0/lib/native/*
-								${webAsmPlay_BINARY_DIR}/thirdParty/boost_date_time-vc141.1.69.0.0/lib/native/*
-								${webAsmPlay_BINARY_DIR}/thirdParty/boost_regex-vc141.1.69.0.0/lib/native/*)
+		file(GLOB boost_files	${webAsmPlay_BINARY_DIR}/thirdParty/boost_filesystem-vc141.${BOOST_VERSION}/lib/native/*
+								${webAsmPlay_BINARY_DIR}/thirdParty/boost_system-vc141.${BOOST_VERSION}/lib/native/*
+								${webAsmPlay_BINARY_DIR}/thirdParty/boost_random-vc141.${BOOST_VERSION}/lib/native/*
+								${webAsmPlay_BINARY_DIR}/thirdParty/boost_date_time-vc141.${BOOST_VERSION}/lib/native/*
+								${webAsmPlay_BINARY_DIR}/thirdParty/boost_regex-vc141.${BOOST_VERSION}/lib/native/*)
 
 		foreach(file ${boost_files})
-			execute_process(COMMAND cmake -E copy ${file} ${webAsmPlay_BINARY_DIR}/thirdParty/boost.1.69.0.0/lib/)
+			execute_process(COMMAND cmake -E copy ${file} ${webAsmPlay_BINARY_DIR}/thirdParty/boost.${BOOST_VERSION}/lib/)
 		endforeach(file)
 	endif()
 
 	set(TBB_LIB_PATH_SUFFIX /lib/x64/Debug /lib/x64/Release)
 
-	set(BOOST_INCLUDEDIR				${webAsmPlay_BINARY_DIR}/thirdParty/boost.1.69.0.0/lib/native/include)
-	set(BOOST_LIBRARYDIR				${webAsmPlay_BINARY_DIR}/thirdParty/boost.1.69.0.0/lib/)
+
+	set(BOOST_INCLUDEDIR				${webAsmPlay_BINARY_DIR}/thirdParty/boost.${BOOST_VERSION}/lib/native/include)
+	set(BOOST_LIBRARYDIR				${webAsmPlay_BINARY_DIR}/thirdParty/boost.${BOOST_VERSION}/lib/)
 	set(SDL2_PATH SDL2_SEARCH_PATHS		${webAsmPlay_BINARY_DIR}/thirdParty/sdl2.new.2.0.8/build/native)
 	set(SDL2_IMAGE_PATH					${webAsmPlay_BINARY_DIR}/thirdParty/vii.SDL2_image.2.0.3/build/native)
 	set(GLEW_LOCATION					${webAsmPlay_BINARY_DIR}/thirdParty/unofficial-flayan-glew.2.1.0/build/native)
@@ -59,17 +62,20 @@ if(MSVC_VERSION)
 	set(CURL_INCLUDE_DIR				${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/include)
 	set(CURL_LIBRARY_RELEASE			${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/lib/x64/static/libcurl.lib)
 	set(CURL_LIBRARY_DEBUG				${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/lib/x64/static/libcurl_debug.lib)
-
+	set(ASSIMP_ROOT_DIR					${webAsmPlay_BINARY_DIR}/thirdParty/assimp.v140.3.2/build/native)
+	set(ASSIMP_INCLUDE_DIR				${webAsmPlay_BINARY_DIR}/thirdParty/assimp.v140.3.2/build/native/include)
+	set(ASSIMP_LIBRARY_DEBUG			${webAsmPlay_BINARY_DIR}/thirdParty/assimp.v140.3.2/build/native/lib/x64/Debug/assimp-vc140-mtd.lib)
+	set(ASSIMP_LIBRARY_RELEASE			${webAsmPlay_BINARY_DIR}/thirdParty/assimp.v140.3.2/build/native/lib/x64/Release/assimp-vc140-mt.lib)
+	
 else()
     set(CURL_LIBRARY_RELEASE ${CURL_LIBRARY})
     set(CURL_LIBRARY_DEBUG   ${CURL_LIBRARY})
 endif()
 
-
 set (CMAKE_CXX_STANDARD 17)
 #set (CMAKE_CXX_STANDARD 14)
 
-if(CMAKE_CXX_COMPILER MATCHES "/em\\+\\+(-[a-zA-Z0-9.])?$")
+if (EMSCRIPTEN)
   message(" * C++ compiler: Emscripten")
   set(CMAKE_CXX_COMPILER_ID "Emscripten")
 else()
@@ -159,6 +165,7 @@ file(GLOB webAsmPlayRenderables_SRC "src/renderables/*.cpp" "inc/webAsmPlay/rend
 file(GLOB webAsmPlayGeom_SRC        "src/geom/*.cpp"		"inc/webAsmPlay/geom/*.h")
 file(GLOB webAsmPlayGUI_SRC	        "src/GUI/*.cpp"			"inc/webAsmPlay/GUI/*.h")
 file(GLOB webAsmPlayCanvas_SRC      "src/canvas/*.cpp"		"inc/webAsmPLay/canvas/*.h")
+file(GLOB webAsmPlayBing_SRC		"src/bing/*.cpp"		"inc/webAsmPlay/bing/*.h")
 file(GLOB geoServer_SRC             "GeoServer/src/*.cpp"	"GeoServer/inc/geoServer/*.h")
                   
 file(GLOB sources   ${webAsmPlay_SRC}
@@ -168,6 +175,7 @@ file(GLOB sources   ${webAsmPlay_SRC}
                     ${webAsmPlayGeom_SRC}
 					${webAsmPlayGUI_SRC}
 					${webAsmPlayCanvas_SRC}
+					${webAsmPlayBing_SRC}
                     ${geosSrc}
                     ${GLUTesselatorSrc}
                     ${simpleJSON_SRC}
@@ -217,6 +225,7 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Emscripten")
                                 -s WASM=1 \
                                 -s USE_WEBGL2=1 \
                                 -s USE_GLFW=3 \
+								-s USE_BOOST_HEADERS=1 \
                                 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/glfw-imgui-emscripten/library_glfw.js \
                                 --js-library ${CMAKE_CURRENT_SOURCE_DIR}/ThirdParty/glfw-imgui-emscripten/library_gl.js \
                                 -s USE_SDL=2 \
@@ -227,6 +236,8 @@ if(CMAKE_CXX_COMPILER_ID STREQUAL "Emscripten")
                                 -s DEMANGLE_SUPPORT=1 \
                                 --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/assets@/ \
                                 --preload-file ${CMAKE_CURRENT_SOURCE_DIR}/config@/")
+
+	SET(CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS} "-s USE_BOOST_HEADERS=1 -s USE_WEBGL2=1")
 
     #-s DEMANGLE_SUPPORT=1 \
     #-s ASSERTIONS=2 \
@@ -262,16 +273,19 @@ else()
 
     set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/cmake/modules")
 
-	find_package(OpenGL)
-    find_package(glfw3 REQUIRED)
-    find_package(Boost COMPONENTS filesystem random REQUIRED)
-    find_package(SDL2 REQUIRED)
-    find_package(SDL2_image REQUIRED)
-	find_package(GLEW REQUIRED)
-    find_package(TBB REQUIRED)
-    find_package(curl REQUIRED)
-	find_package(Expat REQUIRED)
-
+	find_package(Boost COMPONENTS filesystem random REQUIRED)
+	find_package(OpenGL			REQUIRED)
+    find_package(glfw3			REQUIRED)
+    find_package(SDL2			REQUIRED)
+    find_package(SDL2_image		REQUIRED)
+	find_package(GLEW			REQUIRED)
+    find_package(TBB			REQUIRED)
+    find_package(curl			REQUIRED)
+    find_package(Expat			REQUIRED)
+    find_package(Assimp         REQUIRED)
+    
+    message(GLFW3_INCLUDE_PATH ${GLFW3_INCLUDE_PATH})
+    
 	include_directories(${GLEW_INCLUDE_DIR})
     include_directories(${CURL_INCLUDE_DIR})
     include_directories(${Boost_INCLUDE_DIRS})
@@ -279,16 +293,9 @@ else()
     include_directories(${SDL2_IMAGE_INCLUDE_DIR})
 	include_directories(${GLFW3_INCLUDE_PATH})
 	include_directories(${TBB_INCLUDE_DIRS})
+	include_directories(${ASSIMP_INCLUDE_DIR})
     include_directories(ThirdParty/ctpl)
     include_directories(./)
-    
-    if(APPLE) # TODO Try to remove.
-
-        link_libraries(debug ${Boost_FILESYSTEM_LIBRARY_DEBUG}	optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE})
-        link_libraries(debug ${Boost_RANDOM_LIBRARY_DEBUG}		optimized ${Boost_RANDOM_LIBRARY_RELEASE})
-        link_libraries(debug ${Boost_SYSTEM_LIBRARY_DEBUG}		optimized ${Boost_SYSTEM_LIBRARY_RELEASE})
-
-    endif() 
 
 	link_libraries(${GLFW3_LIBRARY})
     link_libraries(${SDL2_IMAGE_LIBRARY})
@@ -296,16 +303,22 @@ else()
     link_libraries(${SDL2_LIBRARY})
 	link_libraries(${OPENGL_gl_LIBRARY})
 	link_libraries(${GLEW_LIBRARY})
-    
+	
     if(MSVC_VERSION)
 
         link_libraries(debug ${CURL_LIBRARY_DEBUG}		optimized ${CURL_LIBRARY_RELEASE})
         link_libraries(debug ${TBB_tbb_LIBRARY_DEBUG}	optimized ${TBB_tbb_LIBRARY_RELEASE})
+		link_libraries(debug ${ASSIMP_LIBRARY_DEBUG}	optimized ${ASSIMP_LIBRARY_RELEASE})
 
     else()
 
+        # The boost libs seem to not be needed on OSX, same for Linux?
+        #link_libraries(debug ${Boost_FILESYSTEM_LIBRARY_DEBUG}	optimized ${Boost_FILESYSTEM_LIBRARY_RELEASE})
+        #link_libraries(debug ${Boost_RANDOM_LIBRARY_DEBUG}		optimized ${Boost_RANDOM_LIBRARY_RELEASE})
+        #link_libraries(debug ${Boost_SYSTEM_LIBRARY_DEBUG}		optimized ${Boost_SYSTEM_LIBRARY_RELEASE})
         link_libraries(${TBB_tbb_LIBRARY_RELEASE})
         link_libraries(${CURL_LIBRARY})
+        link_libraries(${assimp_LIBRARIES})
 
     endif()
     
@@ -323,7 +336,10 @@ else()
                         ypos.png
                         zneg.png
                         zpos.png
-                        if_Info_131908.png)
+                        if_Info_131908.png
+                        tree1.obj
+                        tree1.mtl
+                        )
 	
     foreach(assetFile ${ASSET_FILES})
 
@@ -338,12 +354,25 @@ else()
 			list(APPEND assetFileDestRelWithDebInfo "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/${assetFile}")
 			list(APPEND assetFileDestMinSizeRel		"${CMAKE_CURRENT_BINARY_DIR}/MinSizeRel/${assetFile}")
 			list(APPEND assetFileDestDebug			"${CMAKE_CURRENT_BINARY_DIR}/Debug/${assetFile}")
+
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Release/tiles")
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/tiles")
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/MinSizeRel/tiles")
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Debug/tiles")
+
+			file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Release/bubbles")
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/RelWithDebInfo/bubbles")
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/MinSizeRel/bubbles")
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/Debug/bubbles")
 			
 		else()
 
 			ADD_CUSTOM_COMMAND(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/${assetFile}" COMMAND cmake -E copy "${CMAKE_CURRENT_SOURCE_DIR}/assets/${assetFile}" "${CMAKE_CURRENT_BINARY_DIR}/${assetFile}" DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/${assetFile}")
 
 			list(APPEND assetFileDest "${CMAKE_CURRENT_BINARY_DIR}/${assetFile}")
+
+            file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/tiles")
+			file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/bubbles")
 			
 		endif()
 
@@ -481,12 +510,18 @@ else()
         set(DLLS_RELEASE	
 							${webAsmPlay_BINARY_DIR}/thirdParty/tbb_oss.redist.9.107.0.0/build/native/bin/x64/Release/tbb.dll
 							${webAsmPlay_BINARY_DIR}/thirdParty/expat.v140.2.2.6/build/native/bin/x64/Release/libexpat.dll
-							${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/lib/x64/dynamic/libcurl.dll)
+							${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/lib/x64/dynamic/libcurl.dll
+							${webAsmPlay_BINARY_DIR}/thirdParty/assimp.v140.redist.3.2/build/native/bin/x64/Release/assimp-vc140-mt.dll
+							#${webAsmPlay_BINARY_DIR}/thirdParty/freetype.redist.2.8.0.1/build/native/bin/x64/v141/dynamic/Release/freetype28.dll
+							)
 
 		set(DLLS_DEBUG	
 							${webAsmPlay_BINARY_DIR}/thirdParty/tbb_oss.redist.9.107.0.0/build/native/bin/x64/Debug/tbb_debug.dll
 							${webAsmPlay_BINARY_DIR}/thirdParty/expat.v140.2.2.6/build/native/bin/x64/Debug/libexpatd.dll
-							${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/lib/x64/dynamic/libcurl_debug.dll)
+							${webAsmPlay_BINARY_DIR}/thirdParty/curl-vc141-dynamic-x86_64.7.59.0/build/native/lib/x64/dynamic/libcurl_debug.dll
+							${webAsmPlay_BINARY_DIR}/thirdParty/assimp.v140.redist.3.2/build/native/bin/x64/Debug/assimp-vc140-mtd.dll
+							#${webAsmPlay_BINARY_DIR}/thirdParty/freetype.redist.2.8.0.1/build/native/bin/x64/v141/dynamic/Debug/freetype28d.dll
+							)
 
 
         foreach(dll ${DLLS_RELEASE} ${DLLS_COMMON})
@@ -521,6 +556,7 @@ source_group("webAsmPlay\\renderables"		FILES ${webAsmPlayRenderables_SRC})
 source_group("webAsmPlay\\canvas"			FILES ${webAsmPlayCanvas_SRC})
 source_group("webAsmPlay\\geom"				FILES ${webAsmPlayGeom_SRC})
 source_group("webAsmPlay\\GUI"				FILES ${webAsmPlayGUI_SRC})
+source_group("webAsmPlay\\Bing"				FILES ${webAsmPlayBing_SRC})
 
 
 

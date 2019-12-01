@@ -59,9 +59,8 @@ namespace
     {
     public:
 
-        MyLineString(AttributedLineString * ls) :   ls      (ls),
-                                                    noSplits(false),
-                                                    length  (get<1>(*ls)->getLength())
+        MyLineString(AttributedLineString * ls) :   m_ls      (ls),
+                                                    m_length  (get<1>(*ls)->getLength())
         {
             ++counterMyLineString;
         }
@@ -70,19 +69,16 @@ namespace
         { 
             --counterMyLineString;
 
-            delete pls;
+            delete m_pls;
         }
 
-        const LineString * getLS() const { return get<1>(*ls) ;}
+        const LineString * getLS() const { return get<1>(*m_ls) ;}
 
         void save(vector<AttributedLineString> & out) const
         {
-            if(splits.size())
+            if(m_splits.size())
             {
-                for(auto i : splits)
-                {
-                    out.push_back(AttributedLineString(get<0>(*ls), i));
-                }
+                for(auto i : m_splits) { out.push_back(AttributedLineString(get<0>(*m_ls), i)) ;}
             }
             else if(!getLS())
             {
@@ -90,15 +86,15 @@ namespace
             }
             else
             {
-                out.push_back(*ls);
+                out.push_back(*m_ls);
             }
         }
 
         PreparedLineString * getPLS()
         {
-            if(pls) { return pls ;}
+            if(m_pls) { return m_pls ;}
 
-            return pls = new PreparedLineString(getLS());
+            return m_pls = new PreparedLineString(getLS());
         }
 
         void deleteOrigionalGeom()
@@ -106,23 +102,23 @@ namespace
             //GeometryFactory::getDefaultInstance()->destroyGeometry(get<1>(*ls));
             //delete get<1>(*ls);
 
-            //get<1>(*ls) = NULL;
+            //get<1>(*ls) = nullptr;
         }
 
-        list<LineString *> splits; // TODO try to put the below ls in splits initially. 
+        list<LineString *> m_splits; // TODO try to put the below ls in splits initially. 
 
-        AttributedLineString * ls;
+        AttributedLineString * m_ls = nullptr;
 
-        PreparedLineString * pls = NULL;
+        PreparedLineString * m_pls = nullptr;
 
-        bool noSplits;
+        bool m_noSplits = false;
 
-        float length;
+        float m_length;
     };
 
-    size_t numSplits;
+    size_t a_numSplits;
 
-    size_t lastNumSplits = 0;
+    size_t a_lastNumSplits = 0;
 
     inline LineString * extendEnds(const LineString * ls)
     {
@@ -182,9 +178,9 @@ namespace
     // TODO Memory leaks!
     inline bool doSplitting(MyLineString * B, const LineString * ls, const LineString * curr)
     {
-        Geometry * g = scopedGeosGeometry(ls->difference(curr));
+        auto g = scopedGeosGeometry(ls->difference(curr));
 
-        lastNumSplits = 0;
+        a_lastNumSplits = 0;
 
         bool didSplit = false;
 
@@ -197,7 +193,7 @@ namespace
 
                 for(size_t i = 0; i < gc->getNumGeometries(); ++i)
                 {
-                    const Geometry * g = gc->getGeometryN(i);
+                    const auto g = gc->getGeometryN(i);
 
                     if(g->getGeometryTypeId() != GEOS_LINESTRING)
                     {
@@ -206,17 +202,17 @@ namespace
                         continue;
                     }
 
-                    const LineString * splitLS = dynamic_cast<const LineString *>(g);
+                    const auto splitLS = dynamic_cast<const LineString *>(g);
 
                     if(splitLS->getLength() < epsilon * 2.0) { continue ;}
 
-                    ++numSplits;
+                    ++a_numSplits;
 
-                    ++lastNumSplits;
+                    ++a_lastNumSplits;
 
                     didSplit = true;
 
-                    B->splits.push_front(dynamic_cast<LineString *>(splitLS->clone()));
+                    B->m_splits.push_front(dynamic_cast<LineString *>(splitLS->clone()));
                 }
 
                 break;
@@ -226,10 +222,7 @@ namespace
                 break;
         }
 
-        if(didSplit)
-        {
-            B->deleteOrigionalGeom();
-        }
+        if(didSplit) { B->deleteOrigionalGeom() ;}
 
         return didSplit;
     }
@@ -459,7 +452,7 @@ vector<AttributedLineString> _breakLineStrings(vector<AttributedLineString>& lin
 
 	for (auto& ls : lineStrings)
 	{
-		MyLineString* myLS = new MyLineString(&ls);
+		auto myLS = new MyLineString(&ls);
 
 		tree.insert(get<1>(ls)->getEnvelopeInternal(), (void*)myLS);
 
@@ -468,12 +461,12 @@ vector<AttributedLineString> _breakLineStrings(vector<AttributedLineString>& lin
 
 	sort(myLineStrings.begin(), myLineStrings.end(), [](const MyLineString * lhs, const MyLineString * rhs)
 	{
-		return lhs->length < rhs->length;
+		return lhs->m_length < rhs->m_length;
 	});
 
 	dmess("Tree depth " << tree.depth());
 
-	numSplits = 0;
+	a_numSplits = 0;
 
 	size_t maxNumSplits = 5;
 
@@ -485,21 +478,16 @@ vector<AttributedLineString> _breakLineStrings(vector<AttributedLineString>& lin
 
 		counter++;
 
-		//if(counter > 2500) { break ;}
-		//if(counter > 1000) { break ;}
-
 		if (!ls->getLS()) { continue; }
 
-		//*
-		if (ls->splits.size()) { continue; }
+		if (ls->m_splits.size()) { continue; }
 
-		if (ls->splits.size() > maxNumSplits)
+		if (ls->m_splits.size() > maxNumSplits)
 		{
 			//dmess("skip here!");
 
 			continue;
 		}
-		//*/
 
 		vector< void* > query;
 
@@ -524,20 +512,20 @@ vector<AttributedLineString> _breakLineStrings(vector<AttributedLineString>& lin
 			if (B->getLS() == curr) { continue; }
 
 			//if(false && B->splits.size() > maxNumSplits)
-			if (B->splits.size() > maxNumSplits)
+			if (B->m_splits.size() > maxNumSplits)
 			{
 				didSkip = true;
 
 				continue;
 			}
 
-			if (B->splits.size())
+			if (B->m_splits.size())
 			{
-				auto it = B->splits.begin();
+				auto it = B->m_splits.begin();
 
 				//bool gotIntersect = false;
 
-				while (it != B->splits.end())
+				while (it != B->m_splits.end())
 				{
 					if (endPointsTouch2D(*it, curr))
 					{
@@ -555,7 +543,7 @@ vector<AttributedLineString> _breakLineStrings(vector<AttributedLineString>& lin
 
 						//gotIntersect = true;
 
-						it = B->splits.erase(it);
+						it = B->m_splits.erase(it);
 					}
 					else { ++it; }
 				}
@@ -583,27 +571,134 @@ vector<AttributedLineString> _breakLineStrings(vector<AttributedLineString>& lin
 		{
 			//dmess("Done!");
 
-			ls->noSplits = true;
+			ls->m_noSplits = true;
 		}
 	}
 
 	for (auto ls : myLineStrings)
 	{
-		if (ls->noSplits) { ls->save(nonSplitting); }
+		if (ls->m_noSplits) { ls->save(nonSplitting); }
 
 		else { ls->save(ret); }
 
 		delete ls;
 	}
 
-	dmess("end topology::breakLineStrings " << ret.size() << " nonSplitting " << nonSplitting.size() << " num splits: " << numSplits);
+	dmess("end topology::breakLineStrings " << ret.size() << " nonSplitting " << nonSplitting.size() << " num splits: " << a_numSplits);
 
 	return ret;
 }
 
+#include <webAsmPlay/geom/BoostGeomUtil.h>
+#include <boost/geometry/index/rtree.hpp>
+#include <map>
+
+namespace bg = boost::geometry;
+namespace bgi = boost::geometry::index;
+
+namespace
+{
+	struct envelope_visitor : public boost::static_visitor<boostGeom::Box>
+	{
+		/*
+		box operator()(polygon const& g) const { return bg::return_envelope<box>(g); }
+		box operator()(ring const& g) const { return bg::return_envelope<box>(g); }
+		box operator()(linestring const& g) const { return bg::return_envelope<box>(g); }
+		*/
+
+		boostGeom::Box operator()(boostGeom::LineString const & g) const { return bg::return_envelope<boostGeom::Box>(g); }
+	};
+}
+
+#pragma optimize( "", off )
+vector<AttributedLineStringBoost> _breakLineStrings(vector<AttributedLineStringBoost>& lineStrings, vector<AttributedLineStringBoost>& nonSplitting)
+{
+	vector<AttributedLineStringBoost> ret;
+
+	//typedef std::map<unsigned, geometry> map;
+	typedef std::map<unsigned, boostGeom::LineString> map;
+	//typedef std::pair<boostGeom::Box, map::iterator> value;
+	typedef std::pair<boostGeom::Box, boostGeom::LineString *> value;
+
+	typedef boostGeom::Box box;
+
+	// create the rtree using default constructor
+    bgi::rtree< value, bgi::quadratic<16, 4> > rtree;
+
+	for(auto & [attrs, ls] : lineStrings)
+	{
+		//box b = boost::apply_visitor(envelope_visitor(), ls);
+		box b = bg::return_envelope<boostGeom::Box>(ls);
+
+		rtree.insert(std::make_pair(b, &ls));	
+	}
+
+	for(auto & [attrs, ls] : lineStrings)
+	{
+		box query_box = bg::return_envelope<boostGeom::Box>(ls);
+
+		std::vector<value> result_s;
+
+		rtree.query(bgi::intersects(query_box), std::back_inserter(result_s));
+
+		dmess("result_s " << result_s.size());
+
+		vector<boostGeom::Point> splitPoints;
+
+		for(auto [box, g] : result_s)
+		{
+			if(g == &ls) { continue ;}
+			//if(g == &ls || !bg::intersects(ls, *g)) { continue ;}
+
+			//if(!bg::touches(ls, *g)) { continue ;}
+
+			auto & gg  = *g;
+
+			vector<boostGeom::LineString> split;
+			
+			//bg::difference(*g, ls, split);
+			//bg::sym_difference(*g, ls, split);
+			//bg::union_(*g, ls, split);
+			bg::intersection(*g, ls, splitPoints);
+
+			//if(splitPoints.empty()) { continue ;}
+
+			if(g == &ls)
+			{
+				dmess("");
+			}
+		}
+
+		dmess(splitPoints.size());
+	}
+
+	return ret;
+}
+#pragma optimize( "", on )
+
 void topology::breakLineStrings(vector<AttributedLineString> & lineStrings)
 {
+	/*
     AttributeStatistics::addLineStrings(lineStrings);
+
+	vector<AttributedLineStringBoost> lineStringsBoost;
+
+	for(const auto [attributes, lineString] : lineStrings)
+	{
+		lineStringsBoost.push_back({attributes, boostGeom::convert(lineString)});
+	}
+
+	vector<AttributedLineStringBoost> nonSplitting;
+
+	_breakLineStrings(lineStringsBoost, nonSplitting);
+
+	lineStrings.clear();
+
+	for(const auto [attributes, lineString] : lineStringsBoost)
+	{
+		lineStrings.push_back({attributes, boostGeom::toGeos(lineString)});
+	}
+	*/
 
     vector<AttributedLineString> curr; // = lineStrings;
 
@@ -641,7 +736,7 @@ void topology::breakLineStrings(vector<AttributedLineString> & lineStrings)
             //delete get<1>(j);
         }
     }
-    while(numSplits);
+    while(a_numSplits);
 
     lineStrings.clear();
 

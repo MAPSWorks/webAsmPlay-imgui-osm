@@ -29,6 +29,7 @@
 #include <vector>
 #include <stack>
 #include <mutex>
+#include <functional>
 #include <glm/vec2.hpp>
 #include <glm/mat4x4.hpp>
 #include <webAsmPlay/OpenGL_Util.h>
@@ -83,17 +84,17 @@ public:
 
     glm::vec4 setClearColor(const glm::vec4 & clearColor);
 
-    glm::dmat4 getView() const;
-    glm::dmat4 getModel() const;
-    glm::dmat4 getProjection() const;
-    glm::dmat4 getMVP() const;
-    glm::dmat4 getMV() const;
+    glm::dmat4 getView()		const;
+    glm::dmat4 getModel()		const;
+    glm::dmat4 getProjection()	const;
+    glm::dmat4 getMVP()			const;
+    glm::dmat4 getMV()			const;
 
-    const glm::dmat4 & getViewRef() const;
-    const glm::dmat4 & getModelRef() const;
-    const glm::dmat4 & getProjectionRef() const;
-    const glm::dmat4 & getMVP_Ref() const;
-    const glm::dmat4 & getMV_Ref() const;
+    const glm::dmat4 & getViewRef()			const;
+    const glm::dmat4 & getModelRef()		const;
+    const glm::dmat4 & getProjectionRef()	const;
+    const glm::dmat4 & getMVP_Ref()			const;
+    const glm::dmat4 & getMV_Ref()			const;
 
     void pushModel(const glm::dmat4 & model);
     void popMVP();
@@ -103,12 +104,14 @@ public:
 
     std::vector<Renderable *> getRenderiables() const;
 
-    const std::list<Renderable *> & getPointsRef() const;
-    const std::list<Renderable *> & getLineStringsRef() const;
-    const std::list<Renderable *> & getPolygonsRef() const;
-    const std::list<Renderable *> & getMeshesRef() const;
+    const std::list<Renderable *> & getPointsRef()				const;
+    const std::list<Renderable *> & getLineStringsRef()			const;
+    const std::list<Renderable *> & getPolygonsRef()			const;
+    const std::list<Renderable *> & getMeshesRef()				const;
     const std::list<Renderable *> & getDeferredRenderablesRef() const;
-    const std::list<Renderable *> & getRastersRef() const;
+    const std::list<Renderable *> & getRastersRef()				const;
+    const std::list<Renderable *> & getModelsRef()				const;
+	const std::list<Renderable *> & getTextLablesRef()			const;
 
     static std::vector<Canvas *> getInstances();
 
@@ -132,6 +135,10 @@ public:
 
 	size_t getFrameNumber() const;
 
+	void addLeftClickListener(const std::function<void(const glm::dvec3 & posWC)> & listener);
+
+	void addMouseMoveListener(const std::function<void(const glm::dvec3 & posWC)> & listener);
+
 protected:
 
     bool preRender();
@@ -149,10 +156,10 @@ protected:
 
     void updateMVP();
 
-    rsmz::TrackBallInteractor * m_trackBallInteractor = NULL;
+    rsmz::TrackBallInteractor * m_trackBallInteractor = nullptr;
 
-	FrameBuffer * m_frameBuffer = NULL;
-	FrameBuffer * m_gBuffer		= NULL;
+	FrameBuffer * m_frameBuffer = nullptr;
+	FrameBuffer * m_gBuffer		= nullptr;
 
     bool m_wantMouseCapture = true;
 
@@ -164,6 +171,8 @@ protected:
     std::list<Renderable *> m_meshes;
     std::list<Renderable *> m_deferredRenderables;
     std::list<Renderable *> m_rasters;
+	std::list<Renderable *> m_models;
+	std::list<Renderable *> m_textLabels;
 
     const bool m_useFrameBuffer;
 
@@ -184,17 +193,20 @@ protected:
     
     glm::dvec3 m_cursorPosWC;
 
-    SkyBox * m_skyBox = NULL;
+    SkyBox * m_skyBox = nullptr;
 
     bool m_enabled = true;
 
     std::mutex m_renderiablesMutex;
 
-    Renderable * m_cursor = NULL;
+    Renderable * m_cursor = nullptr;
 
-	FrameBuffer * m_auxFrameBuffer = NULL;
+	FrameBuffer * m_auxFrameBuffer = nullptr;
 
-	Frustum * m_frustum = NULL;
+	Frustum * m_frustum = nullptr;
 
 	double m_perspectiveFOV = 45.0;
+
+	std::vector<std::function<void(const glm::dvec3 & posWC)>> m_leftClickListeners;
+	std::vector<std::function<void(const glm::dvec3 & posWC)>> m_mouseMoveListeners;
 };

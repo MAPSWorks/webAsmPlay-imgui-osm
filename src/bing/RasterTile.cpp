@@ -28,8 +28,8 @@
 #include <algorithm>
 #include <unordered_map>
 #include <webAsmPlay/Util.h>
-#include <webAsmPlay/BingTileSystem.h>
-#include <webAsmPlay/renderables/RasterTile.h>
+#include <webAsmPlay/bing/BingTileSystem.h>
+#include <webAsmPlay/bing/RasterTile.h>
 
 using namespace std;
 using namespace glm;
@@ -42,15 +42,14 @@ namespace
 	vector<uint> a_texturesToFree;
 }
 
-//atomic_size_t RasterTile::s_desiredMaxNumTiles = { 1500 };
 atomic_size_t RasterTile::s_desiredMaxNumTiles = { 4000 };
-//atomic_size_t RasterTile::s_desiredMaxNumTiles = { 10500 };
 
 GLuint RasterTile::s_NO_DATA = numeric_limits<GLuint>::max();
 
-RasterTile::RasterTile(const dvec2& center, const size_t level) : m_center(center), m_level(level)
+RasterTile::RasterTile(const dvec2& center, const dvec2& widthHeight, const size_t level) : m_center		(center),
+																							m_widthHeight	(widthHeight),
+																							m_level			(level)
 {
-	
 }
 
 RasterTile::~RasterTile()
@@ -64,14 +63,22 @@ RasterTile::~RasterTile()
 
 RasterTile* RasterTile::getTile(const dvec2& center, const size_t level, const size_t accessTime)
 {
-	const string quadKey = tileToQuadKey(latLongToTile(center, level), level);
+	const auto tileIndex = latLongToTile(center, level);
 
-	unordered_map<string, RasterTile*>::const_iterator i = a_currTileSet.find(quadKey);
+	const string quadKey = tileToQuadKey(tileIndex, level);
+
+	auto i = a_currTileSet.find(quadKey);
 
 	RasterTile* tile;
 
 	if (i != a_currTileSet.end())	{ tile = i->second ;}
-	else							{ tile = a_currTileSet[quadKey] = new RasterTile(center, level) ;}
+	else
+	{
+		const dvec2 tMin = tileToLatLong(ivec2(tileIndex.x + 0, tileIndex.y + 1), level);
+		const dvec2 tMax = tileToLatLong(ivec2(tileIndex.x + 1, tileIndex.y + 0), level);
+
+		tile = a_currTileSet[quadKey] = new RasterTile((tMin + tMax) * 0.5, tMax - tMin, level);
+	}
 
 	tile->m_lastAccessTime = accessTime;
 

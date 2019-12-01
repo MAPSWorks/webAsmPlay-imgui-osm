@@ -36,24 +36,38 @@ VertexArrayObject * VertexArrayObject::create(const Tessellations & tessellation
 {
     if(tessellations[0]->getHeight() != 0.0)
     {
-        return _create< true, // 3D extrude
-                        true, // Use symbology ID
-                        false // Use UV coords
+        return _create< true,  // 3D extrude
+                        true,  // Use symbology ID
+                        false, // Use UV coords
+						false  // Swap UV Axis
                       > (tessellations, AABB2D());
     }
 
     return _create< false, // 3D extrude
                     true,  // Use symbology ID
-                    false  // Use UV coords
+                    false, // Use UV coords
+					false  // Swap UV Axis
                   > (tessellations, AABB2D());
 }
 
-VertexArrayObject * VertexArrayObject::create(const Tessellations & tessellations, const AABB2D & boxUV)
+VertexArrayObject * VertexArrayObject::create(const Tessellations & tessellations, const AABB2D & boxUV, const bool swapUV_Axis)
 {
-    return _create< false, // 3D extrude
-                    false, // Use symbology ID
-                    true   // Use UV coords
-					> (tessellations, boxUV);
+	if(swapUV_Axis)
+	{
+		return _create< false, // 3D extrude
+						false, // Use symbology ID
+						true,  // Use UV coords
+						true   // Swap UV Axis
+						> (tessellations, boxUV);
+	}
+	else
+	{
+		return _create< false, // 3D extrude
+						false, // Use symbology ID
+						true,  // Use UV coords
+						false  // Swap UV Axis
+						> (tessellations, boxUV);
+	}
 }
 
 namespace
@@ -76,10 +90,10 @@ namespace
     }
 }
 
-template<bool IS_3D, bool USE_SYMBOLOGY_ID, bool USE_UV_COORDS>
+template<bool IS_3D, bool USE_SYMBOLOGY_ID, bool USE_UV_COORDS, bool SWAP_UV_AXIS>
 VertexArrayObject * VertexArrayObject::_create(const Tessellations & tessellations, const AABB2D & boxUV)
 {
-    if(!tessellations.size()) { return NULL ;}
+    if(!tessellations.size()) { return nullptr ;}
 
     FloatVec  verts;
     Uint32Vec triangleIndices;
@@ -123,12 +137,20 @@ VertexArrayObject * VertexArrayObject::_create(const Tessellations & tessellatio
 
                 const dvec2 uv = (P - min) / (max - min);
 
-                verts.push_back(float(uv.y));
-                verts.push_back(float(1 - uv.x));
+				if(SWAP_UV_AXIS)
+				{
+					verts.push_back(float(	  uv.x));
+					verts.push_back(float(1 - uv.y));
+				}
+				else
+				{
+					verts.push_back(float(	  uv.y));
+					verts.push_back(float(1 - uv.x));
+				}
             }
         }
 
-        for(size_t i = 0; i < tess->m_numTriangles * 3; ++i) { triangleIndices.push_back((uint32_t)tess->m_triangleIndices[i] + offset) ;}
+        for(size_t i = 0; i < tess->m_numTriangles * 3; ++i) { triangleIndices.push_back(uint32_t(tess->m_triangleIndices[i] + offset)) ;}
 
         size_t lastIndex = 0;
 
@@ -189,7 +211,7 @@ VertexArrayObject * VertexArrayObject::_create(const Tessellations & tessellatio
 	{
 		dmess("Warning !triangleIndices.size()");
 
-		return NULL;
+		return nullptr;
 	}
 
     GLuint ebo  = 0;
@@ -209,6 +231,9 @@ VertexArrayObject * VertexArrayObject::_create(const Tessellations & tessellatio
     
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo2);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(GLuint) * lineIndices.size(), &lineIndices[0], GL_STATIC_DRAW);
+
+	// Flush is required if executing in a thread different from the main thread.
+	glFlush();
 
     size_t sizeVertex = 2;
     size_t sizeColor  = 0;
@@ -286,12 +311,12 @@ void VertexArrayObject::bindLines() const
 
 void VertexArrayObject::drawTriangles() const
 {
-    glDrawElements(GL_TRIANGLES, m_numTrianglesIndices, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_TRIANGLES, m_numTrianglesIndices, GL_UNSIGNED_INT, nullptr);
 }
 
 void VertexArrayObject::drawLines() const
 {
-    glDrawElements(GL_LINES, (GLsizei)m_numContourLines, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_LINES, (GLsizei)m_numContourLines, GL_UNSIGNED_INT, nullptr);
 }
 
 bool VertexArrayObject::isMulti() const { return m_isMulti ;}
@@ -334,3 +359,5 @@ void VertexArrayObject::ensureVAO()
 
 	glBindVertexArray(0);
 }
+
+size_t VertexArrayObject::getNumTriangles() const { return m_numTrianglesIndices / 3 ;}

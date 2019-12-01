@@ -41,9 +41,15 @@
 
 // TODO add util namespace
 
+std::string toStr(const size_t v);
+
+std::string toStr(const double v);
+
 std::string toStr(const glm::mat4 & m);
 
 std::string toStr(const glm::vec2 & v);
+
+std::string toStr(const glm::dvec2 & v);
 
 std::string toStr(const glm::ivec2 & v);
 
@@ -204,6 +210,14 @@ inline glm::dvec4 append2d(std::vector<double> & data, const glm::dvec4 & value)
     return value;
 }
 
+inline glm::dvec2 append2d(std::vector<double> & data, const glm::dvec2 & value)
+{
+    data.push_back(value.x);
+    data.push_back(value.y);
+
+    return value;
+}
+
 template<typename T>
 inline void append2ui(std::vector<uint32_t> & data, const T A, const T B)
 {
@@ -243,3 +257,74 @@ bool fileExists(const std::string& fileName);
 std::string readFile(const std::string fileName);
 
 nlohmann::json loadJson(const std::string & fileName);
+
+inline bool hasKey(const nlohmann::json & data, const std::string & key) { return data.find(key) != data.end() ;}
+
+// Convert base 10 to arbitrary base
+// - Base must be between 2 and 36
+// - If base is invalid, returns "0"
+// - NOTE: this whole function could be done with itoa
+inline std::string convertFrom10(size_t value, const size_t base)
+{
+	/*
+    if(base < 2 || base > 36) { return "0" ;}
+    
+    const bool isNegative = (value < 0);
+	
+    if(isNegative) { value *= -1 ;}
+    
+    // NOTE: it's probably possible to reserve string based on value
+    std::string output;
+    
+    do
+    {
+        char digit = char(value % base);
+     
+        // Convert to appropriate base character
+        if(digit < 10)	{ digit += '0'				;} // 0-9
+        else			{ digit = digit + 'A' - 10	;} // A-Z
+        
+        // Append digit to string (in reverse order)
+        output += digit;
+        
+        value /= base;
+        
+    } while (value > 0);
+    
+    if(isNegative) { output += '-' ;}
+    
+    // Reverse the string - NOTE: could be done with std::reverse
+    const int len = int(output.size()) - 1;
+
+    for(int i = 0; i < len; ++i)
+    {
+        // Swap characters - NOTE: Could be done with std::swap
+        char temp = output[i];
+
+        output[i] = output[len-i];
+
+        output[len-i] = temp;
+    }
+    
+    return output;
+	*/
+
+	std::string ret;
+
+    while (value != 0){
+        int digit = value % base;
+
+        char stringDigit;
+        if (digit < 10) {
+            stringDigit = '0' + digit;
+        } else {
+            stringDigit = digit - 10 + 'A';
+        }
+
+        ret.insert(ret.begin(), stringDigit);
+
+        value /= base;
+    }
+
+    return ret;
+}

@@ -121,7 +121,7 @@ SkyBox::SkyBox()
     glBindVertexArray(m_vao);
     glEnableVertexAttribArray(0);
     glBindBuffer(GL_ARRAY_BUFFER, m_vbo);
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, NULL);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 0, nullptr);
 }
 
 SkyBox::~SkyBox()
@@ -137,7 +137,7 @@ void SkyBox::render(Canvas * canvas)
     
 	SkyBoxShader::getDefaultInstance()->bind(canvas, false);
 
-    glDepthMask(GL_FALSE);
+    glDepthMask(GL_FALSE); // TODO is this still required?
     glActiveTexture(GL_TEXTURE0);
     glBindTexture(GL_TEXTURE_CUBE_MAP, m_texID);
     glDrawArrays(GL_TRIANGLES, 0, 36);

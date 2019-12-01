@@ -35,12 +35,22 @@ public:
 
     static ColorVertexShader * getDefaultInstance();
 
+	ColorVertexShader();
+
+	~ColorVertexShader();
+
     void bind(  Canvas     * canvas,
                 const bool   isOutline,
                 const size_t renderingStage = 0) override;
 
+	void bind(	const glm::mat4 & model,
+				const glm::mat4 & view,
+				const glm::mat4 & projection,
+				const bool		  isOutline,
+				const size_t	  renderingStage) override;
+
+	void bind(	const glm::mat4 & MVP);
+
 private:
 
-    ColorVertexShader();
-    ~ColorVertexShader();
 };

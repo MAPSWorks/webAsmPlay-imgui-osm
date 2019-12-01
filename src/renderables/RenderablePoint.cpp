@@ -42,7 +42,7 @@ Renderable * RenderablePoint::create(const Point * point,
 Renderable * RenderablePoint::create(const dvec3 & _pos,
                                      const dmat4 & trans)
 {
-    const float size = 0.05;
+    const float size = 0.05f;
 
     const vec3 pos = trans * dvec4(_pos, 1);
 
@@ -65,6 +65,9 @@ Renderable * RenderablePoint::create(const dvec3 & _pos,
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
+	// Flush is required if executing in a thread different from the main thread.
+	glFlush();
+
     return new RenderablePoint(ebo, vbo, false);
 }
 
@@ -79,19 +82,19 @@ Renderable * RenderablePoint::create(const ConstGeosGeomVec & points,
         dmess("P " << P.x << " " << P.y);
     }
 
-    return NULL;
+    return nullptr;
 }
 
 void RenderablePoint::render(Canvas * canvas, const size_t renderStage)
 {
-    if(!m_shader->shouldRender(true, renderStage)) { return ;}
+    if(!m_shader->m_shouldRender(true, renderStage)) { return ;}
 
     m_shader->bind(canvas, false, renderStage);
 
     glBindVertexArray(                    m_vao);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
 
-    glDrawElements(GL_LINES, 4, GL_UNSIGNED_INT, NULL);
+    glDrawElements(GL_LINES, 4, GL_UNSIGNED_INT, nullptr);
 
 	glBindVertexArray(0);
 }

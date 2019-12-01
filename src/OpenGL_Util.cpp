@@ -1,4 +1,4 @@
-﻿/**
+/**
 ╭━━━━╮╱╱╱╱╱╱╱╱╱╭╮╱╭━━━╮╱╱╱╱╱╱╭╮
 ┃╭╮╭╮┃╱╱╱╱╱╱╱╱╱┃┃╱┃╭━╮┃╱╱╱╱╱╱┃┃
 ╰╯┃┃╰╯╭━╮╭━━╮╭╮┃┃╱┃┃╱╰╯╭━━╮╭━╯┃╭━━╮
@@ -94,13 +94,15 @@ GLuint quad_vao = 0;
 
 void OpenGL::init()
 {
-    //*
+    
+#ifndef __APPLE__ // TODO Fix this!
+    
 	glEnable(GL_DEBUG_OUTPUT);
 	glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS); 
-	glDebugMessageCallback(glDebugOutput, nullptr);
+    glDebugMessageCallback(glDebugOutput, nullptr);
 	glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
-    //*/
-
+    
+#endif
 	
 	//if (!quad_vao)
 	{ 
@@ -117,7 +119,7 @@ void OpenGL::init()
 
 	for (size_t i = 0; i < a_numOpenGL_Contexts; ++i)
 	{
-		a_contextWindows.push(glfwCreateWindow(1, 1, "Thread Window", NULL, GUI::getMainWindow()));
+		a_contextWindows.push(glfwCreateWindow(1, 1, "Thread Window", nullptr, GUI::getMainWindow()));
 	}
 }
 
@@ -127,7 +129,7 @@ void OpenGL::ensureSharedContext()
 
 	if(a_setContextes.find(threadID) != a_setContextes.end()) { return ;}
 
-	GLFWwindow * contextWindow = NULL;
+	GLFWwindow * contextWindow = nullptr;
 
 	if(!a_contextWindows.try_pop(contextWindow)) { dmessError("Unable to create opengl shared context! Increase the number available.") }
 

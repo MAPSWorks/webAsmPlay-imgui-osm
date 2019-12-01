@@ -33,7 +33,8 @@ public:
 
     static ColorDistanceDepthShader3D * getDefaultInstance();
 
-    ColorDistanceDepthShader3D();
+    ColorDistanceDepthShader3D(ColorSymbology * colorSymbology = nullptr);
+	
     ~ColorDistanceDepthShader3D();
 
     static void ensureShader();
@@ -50,12 +51,10 @@ public:
 
     size_t getNumRenderingStages() const override;
 
-    bool shouldRender(const bool isOutline, const size_t renderingStage) const override;
-
 private:
 
-    void bindStage0(Canvas * canvas, const bool isOutline);
-    void bindStage1(Canvas * canvas, const bool isOutline);
+    void bindStagePostG_Buffer(Canvas * canvas, const bool isOutline);
+    void bindStageG_Buffer(Canvas * canvas, const bool isOutline);
 
     float m_heightMultiplier = 1.0f;
 

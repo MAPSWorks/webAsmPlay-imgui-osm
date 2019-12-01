@@ -23,18 +23,20 @@
   \email trailcode@gmail.com
   \copyright 2019
 */
+
 #pragma once
 
-class StreetSide
+#include <string>
+#include <webAsmPlay/OpenGL_Util.h>
+
+class BubbleTile
 {
 public:
 
-	static StreetSide * getInstance();
-
-	static void queryViewport();
+	static GLuint requestBubbleTile(const std::string & bubbleQuadKey, const size_t face, const std::string & tileID);
 
 private:
 
-	StreetSide();
-	~StreetSide();
+	BubbleTile() {}
+	~BubbleTile() {}
 };

@@ -31,54 +31,20 @@
 
 using namespace std;
 using namespace glm;
+using namespace ctpl;
 
 namespace
 {
-    Textures * instance = NULL;
-
-    int invertImage(int width, int height, void *image_pixels)
-    {
-        auto temp_row = std::unique_ptr<char>(new char[width]);
-        if (temp_row.get() == nullptr) {
-            //SDL_SetError("Not enough memory for image inversion");
-            return -1;
-        }
-        //if height is odd, don't need to swap middle row
-        int height_div_2 = height / 2;
-        for (int index = 0; index < height_div_2; index++)
-        {
-            //uses string.h
-            memcpy((Uint8 *)temp_row.get(),
-                (Uint8 *)(image_pixels)+
-                width * index,
-                width);
-
-            memcpy(
-                    (Uint8 *)(image_pixels)+
-                    width * index,
-                    (Uint8 *)(image_pixels)+
-                    width * (height - index - 1),
-                    width);
-            memcpy(
-                    (Uint8 *)(image_pixels)+
-                    width * (height - index - 1),
-                    temp_row.get(),
-                    width);
-        }
-        return 0;
-    }
-
-    void invertImage(SDL_Surface * formattedSurf)
-    {
-        invertImage(formattedSurf->w*formattedSurf->format->BytesPerPixel, formattedSurf->h, (char *) formattedSurf->pixels);
-    }
+    Textures * a_instance = nullptr;
 } 
+
+thread_pool Textures::s_queue(1);
 
 Textures * Textures::getInstance()
 {
-    if(instance) { return instance ;}
+    if(a_instance) { return a_instance ;}
 
-    return instance = new Textures();
+    return a_instance = new Textures();
 }
 
 Textures::Textures()
@@ -104,8 +70,6 @@ GLuint Textures::load(const string & filename)
 
     const GLuint texture = load(img);
 
-    //SDL_FreeSurface(img);
-
     return texture;
 }
 
@@ -115,10 +79,7 @@ GLuint Textures::load(const SDL_Surface* img)
 
     glGenTextures(1, &texture);
 
-	glActiveTexture(GL_TEXTURE0); // NEEDED?
-
-    /* Typical Texture Generation Using Data From The Bitmap */
-    glBindTexture(GL_TEXTURE_2D, texture);
+	glActiveTexture(GL_TEXTURE0); glBindTexture(GL_TEXTURE_2D, texture);
 
     int mode = GL_RGB;
 
@@ -139,11 +100,11 @@ GLuint Textures::load(const SDL_Surface* img)
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
+	//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+    //glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-
-    //GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST));
-    //GL_CHECK(glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST));
 
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 4); // Needed?
 
@@ -161,12 +122,12 @@ GLuint Textures::loadCube(const vector<string> & files)
 
     dmess("files[0] " << files[0]);
 
-    SDL_Surface * xpos = IMG_Load(files[0].c_str());
-    SDL_Surface * xneg = IMG_Load(files[1].c_str());
-    SDL_Surface * ypos = IMG_Load(files[2].c_str());
-    SDL_Surface * yneg = IMG_Load(files[3].c_str());
-    SDL_Surface * zpos = IMG_Load(files[4].c_str());
-    SDL_Surface * zneg = IMG_Load(files[5].c_str());
+    auto xpos = IMG_Load(files[0].c_str());
+    auto xneg = IMG_Load(files[1].c_str());
+    auto ypos = IMG_Load(files[2].c_str());
+    auto yneg = IMG_Load(files[3].c_str());
+    auto zpos = IMG_Load(files[4].c_str());
+    auto zneg = IMG_Load(files[5].c_str());
 
     if(!xpos) { dmess("Error cannot load: " << files[0]); return 0 ;}
     if(!xneg) { dmess("Error cannot load: " << files[1]); return 0 ;}
@@ -174,15 +135,6 @@ GLuint Textures::loadCube(const vector<string> & files)
     if(!yneg) { dmess("Error cannot load: " << files[3]); return 0 ;}
     if(!zpos) { dmess("Error cannot load: " << files[4]); return 0 ;}
     if(!zneg) { dmess("Error cannot load: " << files[5]); return 0 ;}
-
-    /*
-    invertImage(xpos);
-    invertImage(xneg);
-    invertImage(ypos);
-    invertImage(yneg);
-    invertImage(zpos);
-    invertImage(zneg);
-    */
 
     GLuint texCube;
     

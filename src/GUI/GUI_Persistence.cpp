@@ -34,7 +34,7 @@
 #include <webAsmPlay/canvas/Canvas.h>
 #include <webAsmPlay/canvas/Camera.h>
 #include <webAsmPlay/canvas/TrackBallInteractor.h>
-#include <webAsmPlay/ColorSymbology.h>
+#include <webAsmPlay/shaders/ColorSymbology.h>
 #include <webAsmPlay/shaders/ColorDistanceShader.h>
 #include <webAsmPlay/shaders/ColorDistanceDepthShader3D.h>
 #include <webAsmPlay/Animation.h>
@@ -45,7 +45,8 @@ using namespace std;
 using namespace glm;
 using namespace nlohmann;
 
-bool GUI::s_showSceneViewPanel                   = false;
+bool GUI::s_showGeosTestPanel					 = false;
+bool GUI::s_showBoostGeomTestPanel				 = false;
 bool GUI::s_showPerformancePanel                 = false;
 bool GUI::s_showRenderSettingsPanel              = false;
 bool GUI::s_showLogPanel                         = false;
@@ -60,6 +61,9 @@ bool GUI::s_showFrameBufferDepthDebugPanel		 = false;
 bool GUI::s_showBingMapsFrameBufferDebugPanel	 = false;
 bool GUI::s_showNormalFrameBufferDebugPanel		 = false;
 bool GUI::s_showAnimationPanel					 = false;
+bool GUI::s_showModelViewerPanel				 = false;	
+bool GUI::s_showStreetSidePanel					 = false;
+bool GUI::s_showBubbleFaceTestPanel				 = false;
 
 bool GUI::s_renderSettingsFillMeshes             = true;
 bool GUI::s_renderSettingsRenderMeshOutlines     = true;
@@ -68,6 +72,7 @@ bool GUI::s_renderSettingsRenderPolygonOutlines  = true;
 bool GUI::s_renderSettingsRenderLinearFeatures   = true;
 bool GUI::s_renderSettingsRenderSkyBox           = true;
 bool GUI::s_renderSettingsRenderBingMaps         = true;
+bool GUI::s_renderSettingsRenderModels           = true;
 
 float GUI::s_lineWidthRender = 1.0;
 
@@ -96,8 +101,8 @@ void GUI::loadState()
         if(root.find(key) != root.end()) { value = root[key]->AsNumber() ;}
     };
 
-    setBool(L"showSceneViewPanel",                  s_showSceneViewPanel);
-    setBool(L"showPerformancePanel",                s_showPerformancePanel);
+    setBool(L"showGeosTestPanel",                   s_showGeosTestPanel);
+	setBool(L"showBoostGeomTestPanel",				s_showBoostGeomTestPanel);
     setBool(L"showPerformancePanel",                s_showPerformancePanel);
     setBool(L"showRenderSettingsPanel",             s_showRenderSettingsPanel);
     setBool(L"showLogPanel",                        s_showLogPanel);
@@ -112,6 +117,9 @@ void GUI::loadState()
 	setBool(L"showBingMapsFrameBufferDebugPanel",	s_showBingMapsFrameBufferDebugPanel);
 	setBool(L"showNormalFrameBufferDebugPanel",		s_showNormalFrameBufferDebugPanel);
 	setBool(L"showAnimationPanel",					s_showAnimationPanel);
+	setBool(L"showModelViewerPanel",				s_showModelViewerPanel);
+	setBool(L"showStreetSidePanel",					s_showStreetSidePanel);
+	setBool(L"showBubbleFaceTestPanel",				s_showBubbleFaceTestPanel);
 
     setBool(L"renderSettingsFillMeshes",            s_renderSettingsFillMeshes);
     setBool(L"renderSettingsRenderMeshOutlines",    s_renderSettingsRenderMeshOutlines);
@@ -120,6 +128,7 @@ void GUI::loadState()
     setBool(L"renderSettingsRenderLinearFeatures",  s_renderSettingsRenderLinearFeatures);
     setBool(L"renderSettingsRenderSkyBox",          s_renderSettingsRenderSkyBox);
     setBool(L"renderSettingsRenderBingMaps",        s_renderSettingsRenderBingMaps);
+    setBool(L"renderSettingsRenderModels",          s_renderSettingsRenderModels);
     setBool(L"OpenSteerAnnotation",                 OpenSteer::enableAnnotation);
 
     setNumber(L"cameraMode",                        s_cameraMode);
@@ -139,7 +148,7 @@ void GUI::loadState()
 
     if(root.find(L"buildingHeightMultiplier") != root.end())
     {
-        ColorDistanceDepthShader3D::getDefaultInstance()->setHeightMultiplier(root[L"buildingHeightMultiplier"]->AsNumber());
+        ColorDistanceDepthShader3D::getDefaultInstance()->setHeightMultiplier(float(root[L"buildingHeightMultiplier"]->AsNumber()));
     }
 
 	Animation::loadFile("animation.json");
@@ -147,10 +156,12 @@ void GUI::loadState()
 
 void GUI::saveState()
 {
+	//*
     JSONObject root;
 
     // Booleans
-    root[L"showSceneViewPanel"]                   = new JSONValue(s_showSceneViewPanel);
+    root[L"showGeosTestPanel"]                    = new JSONValue(s_showGeosTestPanel);
+	root[L"showBoostGeomTestPanel"]               = new JSONValue(s_showBoostGeomTestPanel);
     root[L"showPerformancePanel"]                 = new JSONValue(s_showPerformancePanel);
     root[L"showRenderSettingsPanel"]              = new JSONValue(s_showRenderSettingsPanel);
     root[L"showLogPanel"]                         = new JSONValue(s_showLogPanel);
@@ -165,6 +176,9 @@ void GUI::saveState()
 	root[L"showBingMapsFrameBufferDebugPanel"]    = new JSONValue(s_showBingMapsFrameBufferDebugPanel);
 	root[L"showNormalFrameBufferDebugPanel"]      = new JSONValue(s_showNormalFrameBufferDebugPanel);
 	root[L"showAnimationPanel"]					  = new JSONValue(s_showAnimationPanel);
+	root[L"showModelViewerPanel"]				  = new JSONValue(s_showModelViewerPanel);
+	root[L"showStreetSidePanel"]				  = new JSONValue(s_showStreetSidePanel);
+	root[L"showBubbleFaceTestPanel"]			  = new JSONValue( s_showBubbleFaceTestPanel);
 
     root[L"renderSettingsFillMeshes"]             = new JSONValue(s_renderSettingsFillMeshes);
     root[L"renderSettingsRenderMeshOutlines"]     = new JSONValue(s_renderSettingsRenderMeshOutlines);
@@ -173,6 +187,7 @@ void GUI::saveState()
     root[L"renderSettingsRenderLinearFeatures"]   = new JSONValue(s_renderSettingsRenderLinearFeatures);
     root[L"renderSettingsRenderSkyBox"]           = new JSONValue(s_renderSettingsRenderSkyBox);
     root[L"renderSettingsRenderBingMaps"]         = new JSONValue(s_renderSettingsRenderBingMaps);
+    root[L"renderSettingsRenderModels"]           = new JSONValue(s_renderSettingsRenderModels);
 	root[L"buildingHeightMultiplier"]             = new JSONValue(ColorDistanceDepthShader3D::getDefaultInstance()->getHeightMultiplier());
 
     root[L"cameraEye"]                            = new JSONValue(s_canvas->getCamera()->getEyeConstRef());
@@ -195,6 +210,50 @@ void GUI::saveState()
     configFile << converter.to_bytes(JSONValue(root).Stringify());
 
     configFile.close();
+	//*/
+
+	/*
+	json state;
+
+	state["showGeosTestPanel"]						= s_showGeosTestPanel;
+	state["showBoostGeomTestPanel"]					= s_showBoostGeomTestPanel;
+	state["showPerformancePanel"]					= s_showPerformancePanel;
+	state["showRenderSettingsPanel"]				= s_showRenderSettingsPanel;
+    state["showLogPanel"]							= s_showLogPanel;
+    state["showAttributePanel"]						= s_showAttributePanel;
+    state["showGUI_Settings_Panel"]					= s_showGUI_Settings_Panel;
+    state["showSymbologyPanel"]						= s_showSymbologyPanel;
+    state["showOpenSteerTestPanel"]					= s_showOpenSteerTestPanel;
+    state["showOpenSteerPanel"]						= s_showOpenSteerPanel;
+    state["showCameraInfoPanel"]					= s_showCameraInfoPanel;
+    state["showBingTileSystemPanel"]				= s_showBingTileSystemPanel;
+	state["showFrameBufferDepthDebugPanel"]			= s_showFrameBufferDepthDebugPanel;
+	state["showBingMapsFrameBufferDebugPanel"]		= s_showBingMapsFrameBufferDebugPanel;
+	state["showNormalFrameBufferDebugPanel"]		= s_showNormalFrameBufferDebugPanel;
+	state["showAnimationPanel"]						= s_showAnimationPanel;
+
+    state["renderSettingsFillMeshes"]				= s_renderSettingsFillMeshes;
+    state["renderSettingsRenderMeshOutlines"]		= s_renderSettingsRenderMeshOutlines;
+    state["renderSettingsFillPolygons"]				= s_renderSettingsFillPolygons;
+    state["renderSettingsRenderPolygonOutlines"]	= s_renderSettingsRenderPolygonOutlines;
+    state["renderSettingsRenderLinearFeatures"]		= s_renderSettingsRenderLinearFeatures;
+    state["renderSettingsRenderSkyBox"]				= s_renderSettingsRenderSkyBox;
+    state["renderSettingsRenderBingMaps"]			= s_renderSettingsRenderBingMaps;
+	state["buildingHeightMultiplier"]				= ColorDistanceDepthShader3D::getDefaultInstance()->getHeightMultiplier();
+
+	state["cameraEye"]								= toTuple(s_canvas->getCamera()->getEyeConstRef());
+    state["cameraCenter"]							= toTuple(s_canvas->getCamera()->getCenterConstRef());
+    state["cameraUp"]								= toTuple(s_canvas->getCamera()->getUpConstRef());
+
+    state["OpenSteerAnnotation"]					= OpenSteer::enableAnnotation;
+    state["openSteerCameraDist"]					= s_openSteerCameraDist;
+
+    state["cameraMode"]								= s_cameraMode;
+
+	ColorSymbology::getInstance("defaultMesh")->saveState(state);
+
+	dmess(state.dump(4));
+	*/
 }
 
 

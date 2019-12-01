@@ -27,27 +27,26 @@
 #include <unordered_map>
 #include <webAsmPlay/Util.h>
 #include <webAsmPlay/Textures.h>
-#include <webAsmPlay/ColorSymbology.h>
+#include <webAsmPlay/shaders/ColorSymbology.h>
 
 using namespace std;
 using namespace glm;
+using namespace nlohmann;
 
 namespace
 {
-    //ColorSymbology * instance = NULL;
+    glm::vec4 a_initalColors[32];
 
-    glm::vec4 initalColors[32];
-
-    unordered_map<string, ColorSymbology *> instances;
+    unordered_map<string, ColorSymbology *> a_instances;
 }
 
 ColorSymbology * ColorSymbology::getInstance(const string & name)
 {
-    unordered_map<string, ColorSymbology *>::const_iterator i = instances.find(name);
+    auto i = a_instances.find(name);
 
-    if(i != instances.end()) { return i->second ;}
+    if(i != a_instances.end()) { return i->second ;}
 
-    return instances[name] = new ColorSymbology(name);
+    return a_instances[name] = new ColorSymbology(name);
 }
 
 ColorSymbology::ColorSymbology(const string & name) : m_name(name)
@@ -97,7 +96,7 @@ void ColorSymbology::loadState(const JSONObject & dataStore)
 {
     auto setVec4 = [&dataStore](const wstring & key, vec4 & color)->void
     {
-        JSONObject::const_iterator i = dataStore.find(key);
+        auto i = dataStore.find(key);
 
         if(i != dataStore.end()) { color = i->second->AsVec4() ;}
     };
@@ -124,4 +123,28 @@ void ColorSymbology::saveState(JSONObject & dataStore)
 
         dataStore[stringToWstring(buf)] = new JSONValue(m_colors[i]);
     }
+}
+
+void ColorSymbology::loadState(const json & state)
+{
+	char buf[1024];
+
+	for(size_t i = 0; i < 32; ++i)
+	{
+		sprintf(buf, "ColorSymbology_%s_attributeColor_%i", m_name.c_str(), (int)i);
+
+		if(hasKey(state, buf)) { m_colors[i] = vec4(state[buf]) ;}
+	}
+}
+
+void ColorSymbology::saveState(json & state) const
+{
+	char buf[1024];
+
+	for(size_t i = 0; i < 32; ++i)
+    {
+        sprintf(buf, "ColorSymbology_%s_attributeColor_%i", m_name.c_str(), (int)i);
+
+		state[buf] = toTuple(m_colors[i]);
+	}
 }

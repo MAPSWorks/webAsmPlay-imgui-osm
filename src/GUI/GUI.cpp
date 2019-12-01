@@ -37,17 +37,20 @@
 #include <webAsmPlay/canvas/TrackBallInteractor.h>
 #include <webAsmPlay/canvas/Camera.h>
 #include <webAsmPlay/Util.h>
+#include <webAsmPlay/OpenGL_Util.h>
 #include <webAsmPlay/canvas/Canvas.h>
 #include <webAsmPlay/Textures.h>
 #include <webAsmPlay/GeoClient.h>
+#include <webAsmPlay/Animation.h>
 #include <webAsmPlay/canvas/GeosTestCanvas.h>
+#include <webAsmPlay/canvas/BubbleFaceTestCanvas.h>
 #include <webAsmPlay/canvas/OpenSteerCanvas.h>
 #include <webAsmPlay/canvas/AnimationCanvas.h>
-#include <webAsmPlay/ColorSymbology.h>
-#include <webAsmPlay/OpenGL_Util.h>
+#include <webAsmPlay/canvas/ModelViewerCanvas.h>
+#include <webAsmPlay/shaders/ColorSymbology.h>
 #include <webAsmPlay/renderables/SkyBox.h>
 #include <webAsmPlay/geom/GeosUtil.h>
-#include <webAsmPlay/Animation.h>
+#include <webAsmPlay/bing/StreetSide.h>
 #include <webAsmPlay/GUI/GUI.h>
 
 // .oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.oOo.
@@ -78,20 +81,22 @@ using namespace glm;
 
 #define ARRAYSIZE(_ARR)  ((int)(sizeof(_ARR)/sizeof(*_ARR)))
 
-GeosTestCanvas  * GUI::s_geosTestCanvas		= NULL;
-OpenSteerCanvas * GUI::s_openSteerCanvas	= NULL;
-AnimationCanvas * GUI::s_animationCanvas	= NULL;
-Canvas          * GUI::s_canvas				= NULL;
-SkyBox          * GUI::s_skyBox				= NULL;
-GLFWwindow      * GUI::s_mainWindow			= NULL;
-int               GUI::s_cameraMode			= GUI::CAMERA_TRACK_BALL;
-bool              GUI::s_shuttingDown		= false;
-GeoClient       * GUI::s_client				= NULL;
-vector<Canvas *>  GUI::s_auxCanvases;
-EventQueue		  GUI::s_eventQueue;
-bool			  GUI::s_animationRunning	= false;
-float			  GUI::s_currAnimationTime	= 0;
-float			  GUI::s_animationDuration	= 42.0f;
+GeosTestCanvas		 * GUI::s_geosTestCanvas		= nullptr;
+OpenSteerCanvas		 * GUI::s_openSteerCanvas		= nullptr;
+AnimationCanvas		 * GUI::s_animationCanvas		= nullptr;
+ModelViewerCanvas	 * GUI::s_modelViewerCanvas		= nullptr;
+BubbleFaceTestCanvas * GUI::s_bubbleFaceTestCanvas	= nullptr;
+Canvas				 * GUI::s_canvas				= nullptr;
+SkyBox				 * GUI::s_skyBox				= nullptr;
+GLFWwindow			 * GUI::s_mainWindow			= nullptr;
+int					   GUI::s_cameraMode			= GUI::CAMERA_TRACK_BALL;
+bool				   GUI::s_shuttingDown			= false;
+GeoClient			 * GUI::s_client				= nullptr;
+vector<Canvas *>	   GUI::s_auxCanvases;
+EventQueue			   GUI::s_eventQueue;
+bool				   GUI::s_animationRunning		= false;
+float				   GUI::s_currAnimationTime		= 0;
+float				   GUI::s_animationDuration		= 42.0f;
 
 namespace
 {
@@ -101,7 +106,7 @@ namespace
 
     float a_progressBarValue = 0.0f;
 
-    ImGuiTextBuffer * a_buf = NULL;
+    ImGuiTextBuffer * a_buf = nullptr;
 
     uint32_t a_infoIcon = 0;
 
@@ -152,7 +157,7 @@ struct AppLog
         ScrollToBottom = true;
     }
 
-    void Draw(const char* title, bool* p_opened = NULL)
+    void Draw(const char* title, bool* p_opened = nullptr)
     {
 		ImGui::SetNextWindowSize(ImVec2(500, 400));
         ImGui::Begin(title, p_opened);
@@ -199,11 +204,11 @@ static void showCursorPositionOverlay(bool* p_open, const dvec4 & cursorPos)
 
         if (ImGui::BeginPopupContextWindow())
         {
-            if (ImGui::MenuItem("Custom",       NULL, corner == -1)) corner = -1;
-            if (ImGui::MenuItem("Top-left",     NULL, corner ==  0)) corner =  0;
-            if (ImGui::MenuItem("Top-right",    NULL, corner ==  1)) corner =  1;
-            if (ImGui::MenuItem("Bottom-left",  NULL, corner ==  2)) corner =  2;
-            if (ImGui::MenuItem("Bottom-right", NULL, corner ==  3)) corner =  3;
+            if (ImGui::MenuItem("Custom",       nullptr, corner == -1)) corner = -1;
+            if (ImGui::MenuItem("Top-left",     nullptr, corner ==  0)) corner =  0;
+            if (ImGui::MenuItem("Top-right",    nullptr, corner ==  1)) corner =  1;
+            if (ImGui::MenuItem("Bottom-left",  nullptr, corner ==  2)) corner =  2;
+            if (ImGui::MenuItem("Bottom-right", nullptr, corner ==  3)) corner =  3;
             if (p_open && ImGui::MenuItem("Close")) *p_open = false;
             ImGui::EndPopup();
         }
@@ -265,12 +270,22 @@ void GUI::showMainToolBar()
         ImVec2 uv1(1,1);
         //ImVec2 size(16,16);
         ImVec2 size(32,32);
-        toolbar.addButton(ImGui::Toolbutton("Normal Mode",						(void*)a_infoIcon,uv0,uv1,size));
-        toolbar.addButton(ImGui::Toolbutton("Get Info Linestring Mode",			(void*)a_infoIcon,uv0,uv1,size));
-        toolbar.addButton(ImGui::Toolbutton("Get Info Polygon Mode",			(void*)a_infoIcon,uv0,uv1,size));
-        toolbar.addButton(ImGui::Toolbutton("Get Info Polygon Multiple Mode",	(void*)a_infoIcon,uv0,uv1,size));
-        toolbar.addButton(ImGui::Toolbutton("Set Path Start Point",				(void*)a_infoIcon,uv0,uv1,size));
-        toolbar.addButton(ImGui::Toolbutton("Find Path",						(void*)a_infoIcon,uv0,uv1,size));
+
+#pragma warning( push )
+#pragma warning( disable : 4312)
+
+        toolbar.addButton(ImGui::Toolbutton("Normal Mode",						(void*)(a_infoIcon),uv0,uv1,size));
+        toolbar.addButton(ImGui::Toolbutton("Get Info Linestring Mode",			(void*)(a_infoIcon),uv0,uv1,size));
+        toolbar.addButton(ImGui::Toolbutton("Get Info Polygon Mode",			(void*)(a_infoIcon),uv0,uv1,size));
+        toolbar.addButton(ImGui::Toolbutton("Get Info Polygon Multiple Mode",	(void*)(a_infoIcon),uv0,uv1,size));
+        toolbar.addButton(ImGui::Toolbutton("Get Info Point Mode",              (void*)(a_infoIcon), uv0, uv1, size));
+        toolbar.addButton(ImGui::Toolbutton("Set Path Start Point",				(void*)(a_infoIcon),uv0,uv1,size));
+        toolbar.addButton(ImGui::Toolbutton("Find Path",						(void*)(a_infoIcon),uv0,uv1,size));
+		toolbar.addButton(ImGui::Toolbutton("Pick Bing Tile",					(void*)(a_infoIcon),uv0,uv1,size));
+		toolbar.addButton(ImGui::Toolbutton("Pick StreetSide Bubble",			(void*)(a_infoIcon),uv0,uv1,size));
+
+
+#pragma warning( pop )
 
         toolbar.setProperties(false,false,true,ImVec2(0.5f,0.f));
 
@@ -285,8 +300,11 @@ void GUI::showMainToolBar()
         case 1: a_mode = PICK_MODE_LINESTRING;        break;
         case 2: a_mode = PICK_MODE_POLYGON_SINGLE;    break;
         case 3: a_mode = PICK_MODE_POLYGON_MULTIPLE;  break;
-        case 4: a_mode = SET_PATH_START_POINT;        break;
-        case 5: a_mode = FIND_PATH;                   break;
+        case 4: a_mode = PICK_MODE_POINT;             break;
+        case 5: a_mode = SET_PATH_START_POINT;        break;
+        case 6: a_mode = FIND_PATH;                   break;
+		case 7: a_mode = PICK_BING_TILE;              break;
+		case 8: a_mode = PICK_STREET_SIDE_BUBBLE;	  break;
     }
 }
 
@@ -319,8 +337,9 @@ void setFullScreen( bool fullscreen )
 		const GLFWvidmode * mode = glfwGetVideoMode(monitors[0]);
 
 		// switch to full screen
-		glfwSetWindowMonitor( GUI::getMainWindow(), glfwGetPrimaryMonitor(), 0, 0, 1920, 1080, 0 );
+		//glfwSetWindowMonitor( GUI::getMainWindow(), glfwGetPrimaryMonitor(), 0, 0, 1920, 1080, 0 );
 		//glfwSetWindowMonitor( GUI::getMainWindow(), monitors[0], 0, 0, mode->width, mode->height, mode->refreshRate);
+		glfwSetWindowMonitor( GUI::getMainWindow(), monitors[0], 0, 0, 1920, 1080, mode->refreshRate);
 
 		glfwSwapInterval(1);
 	}
@@ -345,47 +364,22 @@ void GUI::showMainMenuBar()
         if (ImGui::MenuItem("Open", "Ctrl+O")) {
 
         }
-        if(ImGui::MenuItem("Test Web Worker"))
-        {
-            #ifdef __EMSCRIPTEN__
-                //worker_handle worker = emscripten_create_worker("worker.js");
-                //emscripten_call_worker(worker, "one", 0, 0, cback, (void*)42);
-            #else
-                dmess("Implement me!");
-            #endif
-        }
-
-        if(ImGui::MenuItem("Test Emscripten Fetch"))
-        {
-             #ifdef __EMSCRIPTEN__
-
-             #endif
-        }
-
-        if(ImGui::MenuItem("Load Geometry")) { s_client->loadGeoServerGeometry() ;}
-
-		if (ImGui::MenuItem("Exit"))
-		{
-
-			exit(0);
-		}
+        
+		if (ImGui::MenuItem("Exit")) { exit(0) ;}
 
         ImGui::EndMenu();
     }
+
+	/*
     if (ImGui::BeginMenu("Edit"))
     {
-        if (ImGui::MenuItem("Undo", "CTRL+Z")) {}
-        if (ImGui::MenuItem("Redo", "CTRL+Y", false, false)) {}  // Disabled item
-        ImGui::Separator();
-        if (ImGui::MenuItem("Cut", "CTRL+X")) {}
-        if (ImGui::MenuItem("Copy", "CTRL+C")) {}
-        if (ImGui::MenuItem("Paste", "CTRL+V")) {}
-        ImGui::EndMenu();
     }
+	*/
 
     if(ImGui::BeginMenu("View"))
     {
-        if (ImGui::MenuItem("Geos Tests"))				{ s_showSceneViewPanel					^= 1 ;}
+        if (ImGui::MenuItem("Geos Tests"))				{ s_showGeosTestPanel					^= 1 ;}
+		if (ImGui::MenuItem("Boost Geometry Tests"))	{ s_showBoostGeomTestPanel				^= 1 ;}
         if (ImGui::MenuItem("Performance"))				{ s_showPerformancePanel				^= 1 ;}
         if (ImGui::MenuItem("Render Settings"))			{ s_showRenderSettingsPanel				^= 1 ;}
         if (ImGui::MenuItem("Log"))						{ s_showLogPanel						^= 1 ;}
@@ -400,6 +394,9 @@ void GUI::showMainMenuBar()
 		if (ImGui::MenuItem("BingMaps Framebuffer"))	{ s_showBingMapsFrameBufferDebugPanel	^= 1 ;}
 		if (ImGui::MenuItem("Normal Framebuffer"))		{ s_showNormalFrameBufferDebugPanel		^= 1 ;}
 		if (ImGui::MenuItem("Animation"))				{ s_showAnimationPanel					^= 1 ;}
+		if (ImGui::MenuItem("Model Viewer"))			{ s_showModelViewerPanel				^= 1 ;}
+		if (ImGui::MenuItem("Bing StreetSide"))			{ s_showStreetSidePanel					^= 1 ;}
+		if (ImGui::MenuItem("Bubble Face Test"))		{ s_showBubbleFaceTestPanel				^= 1 ;}
 		if (ImGui::MenuItem("Full Screen"))				{ setFullScreen(!g_fullScreen) ;}
 
         ImGui::EndMenu();
@@ -493,9 +490,10 @@ void GUI::mainLoop(GLFWwindow * window)
 	opt_flags |= ImGuiDockNodeFlags_PassthruCentralNode;
 
     window_flags |= ImGuiWindowFlags_NoBackground;
+	
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin("DockSpace Demo", NULL, window_flags);
+    ImGui::Begin("DockSpace Demo", nullptr, window_flags);
     ImGui::PopStyleVar();
 
     ImGui::PopStyleVar(2); // Full screen
@@ -522,14 +520,15 @@ void GUI::mainLoop(GLFWwindow * window)
     
     const double dist = distance(s_canvas->getCamera()->getCenter(), s_canvas->getCamera()->getEye());
 
-    s_canvas->getTrackBallInteractor()->setZoomScale(dist * 0.02);
+    s_canvas->getTrackBallInteractor()->setZoomScale(float(dist * 0.02));
 
     const dvec4 pos(s_canvas->getCursorPosWC(), 1.0);
 
-    showCursorPositionOverlay(NULL, s_client->getInverseTrans() * pos);
-    //showCursorPositionOverlay(NULL, pos);
-
+    showCursorPositionOverlay(nullptr, s_client->getInverseTrans() * pos);
+    
     string attrsStr = s_client->doPicking(a_mode, pos); // TODO move to a_updatables
+	
+	StreetSide::doPicking(a_mode, pos);
 
     for(auto & i : a_updatables) { i() ;}
 
@@ -552,6 +551,9 @@ void GUI::mainLoop(GLFWwindow * window)
 	bingMapsFrameBufferDebugPanel();
 	normalFrameBufferDebugPanel();
 	animationPanel();
+	modelViewerPanel();
+	streetSidePanel();
+	bubbleFaceTestPanel();
 
 	//ImGui::ShowDemoWindow();
 
@@ -564,6 +566,17 @@ void GUI::mainLoop(GLFWwindow * window)
     ImGui::EndFrame();
 
     glfwMakeContextCurrent(s_mainWindow);
+
+	// Update and Render additional Platform Windows
+	// (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
+	//  For this specific demo app we could also call glfwMakeContextCurrent(window) directly)
+	if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+	{
+		GLFWwindow* backup_current_context = glfwGetCurrentContext();
+		ImGui::UpdatePlatformWindows();
+		ImGui::RenderPlatformWindowsDefault();
+		glfwMakeContextCurrent(backup_current_context);
+	}
 
     glfwSwapBuffers(s_mainWindow);
 
@@ -631,9 +644,11 @@ void GUI::initOpenGL() // TODO, need some code refactor here
 
     s_auxCanvases = vector<Canvas *>(
     {
-        s_geosTestCanvas  = new GeosTestCanvas(),
-        s_openSteerCanvas = new OpenSteerCanvas(),
-		s_animationCanvas = new AnimationCanvas()
+        s_geosTestCanvas		= new GeosTestCanvas(),
+        s_openSteerCanvas		= new OpenSteerCanvas(),
+		s_animationCanvas		= new AnimationCanvas(),
+		s_modelViewerCanvas		= new ModelViewerCanvas(),
+		s_bubbleFaceTestCanvas	= new BubbleFaceTestCanvas(),
     });
 }
 
@@ -649,7 +664,7 @@ void GUI::createWorld()
     s_skyBox = new SkyBox();
 
     if(s_renderSettingsRenderSkyBox) { s_canvas->setSkyBox(s_skyBox) ;} // TODO create check render functor
-    else                             { s_canvas->setSkyBox(NULL)     ;}
+    else                             { s_canvas->setSkyBox(nullptr)  ;}
 
     a_pool.push([](int ID) {
         

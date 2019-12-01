@@ -39,55 +39,81 @@ using namespace glm;
 using namespace geos;
 using namespace geos::geom;
 
-RenderablePolygon::RenderablePolygon(VertexArrayObject * vertexArrayObject) :   Renderable(			vertexArrayObject->isMulti(),
-																									GUI::s_renderSettingsFillPolygons,
-																									GUI::s_renderSettingsRenderPolygonOutlines),
-                                                                                m_vertexArrayObject(vertexArrayObject)
+RenderablePolygon::RenderablePolygon(VertexArrayObject * vertexArrayObject) :   Renderable(	vertexArrayObject,
+																							GUI::s_renderSettingsFillPolygons,
+																							GUI::s_renderSettingsRenderPolygonOutlines)
 {
 }
 
 RenderablePolygon::~RenderablePolygon()
 {
-    delete m_vertexArrayObject;
 }
 
 Renderable * RenderablePolygon::create( const Polygon * poly,
                                         const dmat4   & trans,
                                         const size_t    symbologyID,
-                                        const AABB2D  & boxUV)
+                                        const AABB2D  & boxUV,
+										const bool		swapUV_Axis)
 {
     Tessellations tesselations;
 
     tesselations.push_back(Tessellation::tessellatePolygon(poly, trans, symbologyID));
 
-    if((*tesselations.begin())->isEmpty()) { return NULL ;}
+    if((*tesselations.begin())->isEmpty()) { return nullptr ;}
 
     if(get<0>(boxUV) != get<2>(boxUV))
     {
 		const dvec2 min = trans * dvec4(get<0>(boxUV), get<1>(boxUV), 0, 1);
 		const dvec2 max = trans * dvec4(get<2>(boxUV), get<3>(boxUV), 0, 1);
 
-		VertexArrayObject * vao = VertexArrayObject::create(tesselations, AABB2D(min.x, min.y, max.x, max.y));
+		if (auto vao = VertexArrayObject::create(tesselations, AABB2D(min.x, min.y, max.x, max.y), swapUV_Axis)) { return new RenderablePolygon(vao) ;}
 
-		if (!vao) { return NULL ;}
-
-        return new RenderablePolygon(vao);
+        return nullptr;
     }
 
-	VertexArrayObject * vao = VertexArrayObject::create(tesselations);
+	if(auto vao = VertexArrayObject::create(tesselations)) { return new RenderablePolygon(vao) ;}
 
-	if (!vao) { return NULL; }
-
-    return new RenderablePolygon(vao);
+    return nullptr;
 }
 
 Renderable * RenderablePolygon::create( const MultiPolygon  * multiPoly,
                                         const dmat4         & trans,
                                         const size_t          symbologyID,
-                                        const AABB2D        & boxUV // TODO Implement!
+                                        const AABB2D        & boxUV, // TODO Implement!
+										const bool			  swapUV_Axis
                                         )
 {
     Tessellations tessellations;
+
+    Tessellation::tessellateMultiPolygon(multiPoly, trans, tessellations, symbologyID);
+
+    return new RenderablePolygon(VertexArrayObject::create(tessellations));
+}
+
+Renderable * RenderablePolygon::create( const boostGeom::Polygon	& polygon,
+										const dmat4					& trans,
+										const size_t				  symbologyID,
+										const AABB2D				& boxUV,
+										const bool					  swapUV_Axis)
+{
+	Tessellations tesselations;
+
+    tesselations.push_back(Tessellation::tessellatePolygon(polygon, trans, symbologyID));
+
+	if((*tesselations.begin())->isEmpty()) { return nullptr ;}
+
+    if(auto vao = VertexArrayObject::create(tesselations)) { return new RenderablePolygon(vao) ;}
+
+	return nullptr;
+}
+
+Renderable * RenderablePolygon::create( const boostGeom::MultiPolygon	& multiPoly,
+										const dmat4						& trans,
+										const size_t					  symbologyID,
+										const AABB2D					& boxUV, // TODO Implement!
+										const bool						  swapUV_Axis)
+{
+	Tessellations tessellations;
 
     Tessellation::tessellateMultiPolygon(multiPoly, trans, tessellations, symbologyID);
 
@@ -138,20 +164,23 @@ Renderable * RenderablePolygon::create( const ColoredGeometryVec & polygons,
 
 void RenderablePolygon::render(Canvas * canvas, const size_t renderStage)
 {
+	const bool renderFill		= getRenderFill()		&& m_shader->m_shouldRender(false,	renderStage);
+	const bool renderOutline	= getRenderOutline()	&& m_shader->m_shouldRender(true,	renderStage);
+
+	if(!renderFill && !renderOutline) { return ;}
+
     m_vertexArrayObject->bind(m_shader);
 
-    m_vertexArrayObject->bindTriangles();
-
-	glEnable(GL_DEPTH_TEST);
-
-    if(getRenderFill() && m_shader->shouldRender(false, renderStage))
+    if(renderFill)
     {
         m_shader->bind(canvas, false, renderStage);
+		
+		m_vertexArrayObject->bindTriangles();
 
         m_vertexArrayObject->drawTriangles();
     }
 
-    if(getRenderOutline() && m_shader->shouldRender(true, renderStage))
+    if(renderOutline)
     {
         m_shader->bind(canvas, true, renderStage);
 

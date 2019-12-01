@@ -62,7 +62,7 @@ Renderable * RenderableLineString::create(  const LineString * lineString,
     {
         dmess("Error lineString is NULL!");
 
-        return NULL;
+        return nullptr;
     }
 
     return create(*lineString->getCoordinatesRO()->toVector(), trans);
@@ -74,7 +74,7 @@ Renderable * RenderableLineString::create(const vector<Coordinate> & coords, con
     {
         dmess("Bad geometry!");
 
-        return NULL;
+        return nullptr;
     }
 
     FloatVec  verts  (coords.size() * 2);
@@ -131,10 +131,10 @@ Renderable * RenderableLineString::create(const ColoredGeometryVec & lineStrings
     {
         if(showProgress) { doProgress("(3/6) Creating geometry:", i, lineStrings.size(), startTime) ;}
 
-        const Geometry  * geom        = get<0>(lineStrings[i]);
-        const float       symbologyID = (float(get<1>(lineStrings[i]) * 4) + 0.5f) / 32.0f;
+        const auto	geom        = get<0>(lineStrings[i]);
+        const float symbologyID = (float(get<1>(lineStrings[i]) * 4) + 0.5f) / 32.0f;
 
-        const vector<Coordinate> & coords = *dynamic_cast<const LineString *>(geom)->getCoordinatesRO()->toVector();
+        const auto & coords = *dynamic_cast<const LineString *>(geom)->getCoordinatesRO()->toVector();
 
 		if(trans == dmat4(1.0)) { dmessError("Implement!") ;}
         else
@@ -165,7 +165,7 @@ Renderable * RenderableLineString::create(const ColoredGeometryVec & lineStrings
         }
     }
 
-    Renderable * ret = create(verts, indices, true);
+    auto ret = create(verts, indices, true);
 
     if(showProgress) { GUI::progress("", 1.0) ;}
 
@@ -188,8 +188,10 @@ Renderable * RenderableLineString::create(  const FloatVec  & verts,
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(GLfloat) * verts.size(), &verts[0], GL_STATIC_DRAW);
 
-    // TODO use the VertexArrayObject
-
+	// Flush is required if executing in a thread different from the main thread.
+	glFlush();
+    
+	// TODO use the VertexArrayObject
     return new RenderableLineString(ebo,
                                     vbo,
                                     indices.size(),
@@ -230,7 +232,7 @@ void RenderableLineString::ensureVAO()
 
 void RenderableLineString::render(Canvas * canvas, const size_t renderStage)
 {
-    if(!m_shader->shouldRender(true, renderStage)) { return ;}
+    if(!m_shader->m_shouldRender(true, renderStage)) { return ;}
 
     if(!getRenderOutline()) { return ;}
 
@@ -243,13 +245,43 @@ void RenderableLineString::render(Canvas * canvas, const size_t renderStage)
     {
         m_shader->bind(canvas, true, renderStage);
 
-        glDrawElements(GL_LINE_STRIP, (GLsizei)m_numElements, GL_UNSIGNED_INT, NULL);
+        glDrawElements(GL_LINE_STRIP, (GLsizei)m_numElements, GL_UNSIGNED_INT, nullptr);
     }
     else
     {
         m_shader->bind(canvas, true, renderStage);
 
-        glDrawElements(GL_LINES, (GLsizei)m_numElements, GL_UNSIGNED_INT, NULL);
+        glDrawElements(GL_LINES, (GLsizei)m_numElements, GL_UNSIGNED_INT, nullptr);
+    }
+
+    glBindVertexArray(0);
+}
+
+void RenderableLineString::render(	const mat4		& model,
+									const mat4		& view,
+									const mat4		& projection,
+									const size_t	  renderStage)
+{
+	if(!m_shader->m_shouldRender(true, renderStage)) { return ;}
+
+    if(!getRenderOutline()) { return ;}
+
+    glBindVertexArray(                    m_vao);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, m_ebo);
+
+	glLineWidth(GUI::s_lineWidthRender);
+
+    if(!m_isMulti)
+    {
+        m_shader->bind(model, view, projection, true, renderStage);
+
+        glDrawElements(GL_LINE_STRIP, (GLsizei)m_numElements, GL_UNSIGNED_INT, nullptr);
+    }
+    else
+    {
+        m_shader->bind(model, view, projection, true, renderStage);
+
+        glDrawElements(GL_LINES, (GLsizei)m_numElements, GL_UNSIGNED_INT, nullptr);
     }
 
     glBindVertexArray(0);

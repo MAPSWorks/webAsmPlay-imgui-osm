@@ -26,6 +26,7 @@
 #pragma once
 
 #include <glm/mat4x4.hpp>
+#include <webAsmPlay/geom/BoostGeomUtil.h>
 #include <webAsmPlay/Types.h>
 
 class Tessellation
@@ -36,16 +37,28 @@ public:
 
     typedef std::vector<ConstPtr> Tessellations;
 
-    static ConstPtr tessellatePolygon(	const geos::geom::Polygon		* poly,
-                                                    const glm::dmat4    & trans,
-                                                    const size_t          symbologyID = 0,
-                                                    const double          height      = 0.0,
-                                                    const double          minHeight   = 0.0);
+    static ConstPtr tessellatePolygon(	const geos::geom::Polygon			* poly,
+                                        const glm::dmat4					& trans,
+                                        const size_t						  symbologyID = 0,
+                                        const double						  height      = 0.0,
+                                        const double						  minHeight   = 0.0);
 
-    static void tessellateMultiPolygon( const geos::geom::MultiPolygon  * multiPoly,
-                                        const glm::dmat4                & trans,
-                                        Tessellations                   & tessellations,
-                                        const size_t                      symbologyID);
+	static ConstPtr tessellatePolygon(	const boostGeom::Polygon			& poly,
+                                        const glm::dmat4					& trans,
+                                        const size_t						  symbologyID = 0,
+                                        const double						  height      = 0.0,
+                                        const double						  minHeight   = 0.0);
+
+    static void tessellateMultiPolygon( const geos::geom::MultiPolygon		* multiPoly,
+                                        const glm::dmat4					& trans,
+                                        Tessellations						& tessellations,
+                                        const size_t						  symbologyID);
+
+	static void tessellateMultiPolygon( const boostGeom::MultiPolygon		& multiPoly,
+                                        const glm::dmat4					& trans,
+                                        Tessellations						& tessellations,
+                                        const size_t						  symbologyID);
+
     ~Tessellation();
 
     bool     isEmpty() const;
@@ -62,10 +75,21 @@ private:
 	Tessellation(Tessellation &&)                   = delete;
 	Tessellation & operator=(const Tessellation &)  = delete;
 
+	template<typename CoordVec>
+	static void tessellateRing(	const glm::dmat4	& trans,
+								const CoordVec		& inVerts,
+								Tessellation		* tess,
+								std::vector<double>	& outVerts,
+								const bool			  isOuter);
+
+	static Tessellation::ConstPtr doTessellation(Tessellation * tess, const std::vector<double> & verts);
+
+	//static void addTessellation(Tessellations & tessellations, ConstPtr tess);
+
     friend class VertexArrayObject;
 
-    double    * m_verts           = NULL; // TODO make object oriented 
-    uint32_t  * m_triangleIndices = NULL;
+    double    * m_verts           = nullptr; // TODO make object oriented 
+    uint32_t  * m_triangleIndices = nullptr;
     uint32_t    m_numVerts        = 0;
     uint32_t    m_numTriangles    = 0;
 

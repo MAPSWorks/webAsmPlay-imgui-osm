@@ -26,6 +26,7 @@
 
 #include <webAsmPlay/canvas/Canvas.h>
 #include <webAsmPlay/shaders/ShaderProgram.h>
+#include <webAsmPlay/shaders/ColorSymbology.h>
 #include <webAsmPlay/shaders/ColorVertexShader.h>
 
 using namespace glm;
@@ -34,38 +35,55 @@ using namespace glm;
 
 namespace
 {
-    ShaderProgram     * shaderProgram   = NULL;
-    ColorVertexShader * defaultInstance = NULL;
+    ShaderProgram     * a_shaderProgram   = nullptr;
+    ColorVertexShader * a_defaultInstance = nullptr;
 
-    GLint vertInAttrLoc;
-    GLint vertColorInAttrLoc;
+    GLint a_vertInAttr;
+    GLint a_vertColorInAttr;
 
-    GLint MVP_Loc;
+    GLint a_MVP;
 }
 
 void ColorVertexShader::ensureShader()
 {
-    if(shaderProgram) { return ;}
+    if(a_shaderProgram) { return ;}
 
-	shaderProgram = ShaderProgram::create(  GLSL({		{GL_VERTEX_SHADER,		"ColorVertexShader.vs.glsl"	},
+	a_shaderProgram = ShaderProgram::create(GLSL({		{GL_VERTEX_SHADER,		"ColorVertexShader.vs.glsl"	},
 														{GL_FRAGMENT_SHADER,	"ColorVertexShader.fs.glsl"	}}),
-                                            Variables({	{"vertIn",				vertInAttrLoc				},
-														{"vertColorIn",			vertColorInAttrLoc			}}),
-                                            Variables({	{"MVP",					MVP_Loc						}}));
+                                            Variables({	{"vertIn",				a_vertInAttr				},
+														{"vertColorIn",			a_vertColorInAttr			}}),
+                                            Variables({	{"MVP",					a_MVP						}}));
 
-    defaultInstance = new ColorVertexShader();
+    a_defaultInstance = new ColorVertexShader();
 }
 
-ColorVertexShader::ColorVertexShader() : Shader("ColorVertexShader") {}
+ColorVertexShader::ColorVertexShader() : Shader("ColorVertexShader",
+												ColorSymbology::getInstance("defaultPolygon"),
+												Shader::s_defaultShouldRender) {}
+
 ColorVertexShader::~ColorVertexShader() {}
 
-ColorVertexShader * ColorVertexShader::getDefaultInstance() { return defaultInstance ;}
+ColorVertexShader * ColorVertexShader::getDefaultInstance() { return a_defaultInstance ;}
 
 void ColorVertexShader::bind(Canvas     * canvas,
                              const bool   isOutline,
                              const size_t renderingStage)
 {
-    shaderProgram->bind();
+	bind(canvas->getMVP_Ref());
+}
 
-    shaderProgram->setUniform(MVP_Loc, canvas->getMVP_Ref());
+void ColorVertexShader::bind(	const mat4		& model,
+								const mat4		& view,
+								const mat4		& projection,
+								const bool		  isOutline,
+								const size_t	  renderingStage)
+{
+	bind(projection * view * model);
+}				
+
+void ColorVertexShader::bind(const mat4 & MVP)
+{
+	a_shaderProgram->bind();
+
+    a_shaderProgram->setUniform(a_MVP, MVP);
 }

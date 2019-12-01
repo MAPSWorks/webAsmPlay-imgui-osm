@@ -28,6 +28,7 @@
 #include <string>
 #include <vector>
 #include <functional>
+#include <glm/mat4x4.hpp>
 #include <webAsmPlay/OpenGL_Util.h>
 
 class Canvas;
@@ -44,32 +45,50 @@ public:
 private:
 };
 
+enum RenderingStage
+{
+	G_BUFFER		= 1,
+	POST_G_BUFFER	= 0,
+};
+
 class Shader
 {
 public:
 
     virtual void bind(Canvas * canvas, const bool isOutline, const size_t renderingStage) = 0;
 
+	virtual void bind(	const glm::mat4 & model,
+						const glm::mat4 & view,
+						const glm::mat4 & projection,
+						const bool		  isOutline,
+						const size_t	  renderingStage);
+
     std::string getName() const;
 
     virtual size_t getNumRenderingStages() const;
-
-    virtual bool shouldRender(const bool isOutline, const size_t renderingStage) const;
 
     ColorSymbology * setColorSymbology(ColorSymbology * colorSymbology);
     ColorSymbology * getColorSymbology() const;
 
 	static void ensureShaders();
 
+	typedef std::function<bool(const bool isOutline, const size_t renderingStage)> ShouldRenderFunctor;
+
+	static ShouldRenderFunctor s_defaultShouldRender;
+
+	const ShouldRenderFunctor m_shouldRender;
+	
 protected:
 
-    Shader(const std::string & shaderName);
+    Shader(	const std::string			& shaderName,
+			ColorSymbology				* colorSymbology,
+			const ShouldRenderFunctor	& shouldRenderFunctor);
 
     virtual ~Shader() {}
 
     const std::string m_shaderName;
 
-    ColorSymbology * m_colorSymbology = NULL;
+    ColorSymbology * m_colorSymbology = nullptr;
 
 	friend class RegisterShader;
 

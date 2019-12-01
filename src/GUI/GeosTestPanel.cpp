@@ -32,11 +32,11 @@
 
 void GUI::geosTestPanel()
 {
-    s_geosTestCanvas->setEnabled(s_showSceneViewPanel);
+    s_geosTestCanvas->setEnabled(s_showGeosTestPanel);
 
-    if(!s_showSceneViewPanel) { return ;}
+    if(!s_showGeosTestPanel) { return ;}
     
-    ImGui::Begin("Geos Tests", &s_showSceneViewPanel);
+    ImGui::Begin("Geos Tests", &s_showGeosTestPanel);
 
         const ImVec2 pos = ImGui::GetCursorScreenPos();
 

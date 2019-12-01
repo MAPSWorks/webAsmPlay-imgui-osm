@@ -23,52 +23,28 @@
   \email trailcode@gmail.com
   \copyright 2019
 */
-
 #pragma once
 
-#include <atomic>
-#include <mutex>
-#include <glm/vec2.hpp>
-#include <webAsmPlay/OpenGL_Util.h>
+#include <webAsmPlay/canvas/Canvas.h>
 
-class Renderable;
-
-class RasterTile
+class BoostGeomTestCanvas : public Canvas
 {
 public:
 
-	RasterTile(const glm::dvec2& center, const size_t level);
+    BoostGeomTestCanvas();
+    ~BoostGeomTestCanvas();
 
-	~RasterTile();
+    void setGeomParameters( const float buffer1,
+                            const float buffer2,
+                            const float buffer3);
 
-	static RasterTile* getTile(const glm::dvec2& center, const size_t level, const size_t accessTime);
+	void exportGeoJson() const;
 
-	static size_t pruneTiles();
+private:
 
-	static size_t getNumTiles();
+    std::vector<std::unique_ptr<Renderable> > m_geoms;
 
-	RasterTile* getParentTile(const size_t accessTime) const;
-
-	bool textureReady() const;
-
-	const glm::dvec2	m_center;
-	const size_t		m_level;
-
-	std::atomic_bool m_loading = { false };
-
-	std::atomic_bool m_stillNeeded = { true };
-
-	Renderable* m_renderable = NULL;
-
-	static GLuint s_NO_DATA;
-
-	std::atomic<GLuint> m_textureID = { 0 };
-
-	GLuint64 m_handle = 0;
-
-	bool m_textureResident = false;
-
-	size_t m_lastAccessTime = 0;
-
-	static std::atomic_size_t s_desiredMaxNumTiles;
+    float m_buffer1;
+    float m_buffer2;
+    float m_buffer3;
 };

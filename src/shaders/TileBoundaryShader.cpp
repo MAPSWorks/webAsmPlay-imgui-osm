@@ -33,36 +33,34 @@
 
 namespace
 {
-    ShaderProgram * shaderProgram   = NULL;
+    ShaderProgram		* a_shaderProgram   = nullptr;
+    TileBoundaryShader	* a_defaultInstance = nullptr;
 
-    TileBoundaryShader * defaultInstance = NULL;
-
-    GLint vertInAttrLoc;
+    GLint a_vertInAttr;
     
-    GLint MVP_Loc;
+    GLint a_MVP;
 }
 
-TileBoundaryShader * TileBoundaryShader::getDefaultInstance()
-{
-    return defaultInstance;
-}
+TileBoundaryShader * TileBoundaryShader::getDefaultInstance() { return a_defaultInstance ;}
 
 void TileBoundaryShader::ensureShader()
 {
-	return; // This one is not compiling!
+	//return; // This one is not compiling!
 
-    if(shaderProgram) { return ;}
+    if(a_shaderProgram) { return ;}
 
-	shaderProgram = ShaderProgram::create(  GLSL({		{GL_VERTEX_SHADER,		"TileBoundaryShader.vs.glsl"	},
+	a_shaderProgram = ShaderProgram::create(GLSL({		{GL_VERTEX_SHADER,		"TileBoundaryShader.vs.glsl"	},
 														{GL_FRAGMENT_SHADER,	"TileBoundaryShader.fs.glsl"	},
 														{GL_GEOMETRY_SHADER,	"TileBoundaryShader.gs.glsl"	}}),
-                                            Variables({	{"vertIn",				vertInAttrLoc					}}),
-                                            Variables({	{"MVP",					MVP_Loc							}}));
+                                            Variables({	{"vertIn",				a_vertInAttr					}}),
+                                            Variables({	{"MVP",					a_MVP							}}));
 
-    defaultInstance = new TileBoundaryShader();
+    a_defaultInstance = new TileBoundaryShader();
 }
 
-TileBoundaryShader::TileBoundaryShader() : Shader("TileBoundaryShader")
+TileBoundaryShader::TileBoundaryShader() : Shader(	"TileBoundaryShader",
+													nullptr,
+													Shader::s_defaultShouldRender)
 {
 
 }
@@ -76,5 +74,11 @@ void TileBoundaryShader::bind(  Canvas     * canvas,
                                 const bool   isOutline,
                                 const size_t renderingStage)
 {
+	glDisable(GL_BLEND);
 
+	glDisable(GL_DEPTH_TEST);
+
+	a_shaderProgram->bind();
+
+	a_shaderProgram->setUniform(a_MVP, canvas->getMVP_Ref());
 }

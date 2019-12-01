@@ -66,10 +66,10 @@ namespace
     OSM_Ways      ways;
     OSM_Relations relations;
 
-    OSM_Base     * curr         = NULL;
-    OSM_Node     * currNode     = NULL;
-    OSM_Way      * currWay      = NULL;
-    OSM_Relation * currRelation = NULL;
+    OSM_Base     * curr         = nullptr;
+    OSM_Node     * currNode     = nullptr;
+    OSM_Way      * currWay      = nullptr;
+    OSM_Relation * currRelation = nullptr;
 
     double boundsMinX = 0;
     double boundsMaxX = 0;
@@ -80,7 +80,9 @@ namespace
     {
         const auto i = nodes.find(ID);
 
-        if(i == nodes.end()) { return NULL ;}
+        if(i == nodes.end()) { return nullptr ;}
+
+		++i->second->m_useCount;
 
         return i->second;
     }
@@ -89,7 +91,7 @@ namespace
     {
         const auto i = ways.find(ID);
 
-        if(i == ways.end()) { return NULL ;}
+        if(i == ways.end()) { return nullptr ;}
 
         return i->second;
     }
@@ -98,7 +100,7 @@ namespace
     {
         const auto i = relations.find(ID);
 
-        if(i == relations.end()) { return NULL ;}
+        if(i == relations.end()) { return nullptr ;}
 
         return i->second;
     }
@@ -115,7 +117,7 @@ MapData OSM_Reader::import(const string & fileName)
 
     char buf[BUFSIZ];
 
-    XML_Parser parser = XML_ParserCreate(NULL);
+    XML_Parser parser = XML_ParserCreate(nullptr);
     
     int done;
     int depth = 0;
@@ -185,7 +187,7 @@ MapData OSM_Reader::import(const string & fileName)
             
             LinearRing * externalRing = factory->createLinearRing(coords);
 
-            way->m_geom = unique_ptr<Geometry>(factory->createPolygon(externalRing, NULL));
+            way->m_geom = unique_ptr<Geometry>(factory->createPolygon(externalRing, nullptr));
         }
     }
 
@@ -193,7 +195,7 @@ MapData OSM_Reader::import(const string & fileName)
     size_t numInvalidPoints    = 0;
     size_t geomOperationErrors = 0;
 
-    Geometry::Ptr bounds = makeBox(boundsMinX, boundsMinY, boundsMaxX, boundsMaxY);
+    Geometry::Ptr bounds = makeBox({boundsMinX, boundsMinY}, {boundsMaxX, boundsMaxY});
 
     for(const OSM_Relations::value_type & i : relations)
     {
@@ -216,7 +218,7 @@ MapData OSM_Reader::import(const string & fileName)
                     }
 
                     // TODO, do we need to clip to the bounds?
-                    ret.m_geometry.push_back(AttributedGeometry(node->m_attrs.release(), __(node->m_pos)));
+                    ret.m_geometry.push_back(AttributedGeometry(node->m_attrs.release(), getPoint(node->m_pos)));
 
                     break;
                 }
@@ -255,7 +257,7 @@ MapData OSM_Reader::import(const string & fileName)
                     
                 default:
 
-                    //dmess("Implement me! [" << member->type << "]");
+                    //dmess("Implement me! [" << member->m_type << "]");
 
                     break;
             }
@@ -297,6 +299,7 @@ MapData OSM_Reader::import(const string & fileName)
 			if (way && way->m_geom)
 			{
 				Geometry* geom = bounds->intersection(way->m_geom.get());
+				//Geometry* geom = way->m_geom.release(); 
 
 				if (!geom)
 				{
@@ -311,7 +314,7 @@ MapData OSM_Reader::import(const string & fileName)
 			}
 			else
 			{
-				//dmess("!way->geom");
+				dmess("!way->geom");
 			}
 		}
 		catch (...)
@@ -329,6 +332,13 @@ MapData OSM_Reader::import(const string & fileName)
     {
         if(!i.second->m_relations.size()) { ++a ;}
         else { ++b ;}
+
+		if(!i.second->m_useCount)
+		{
+			// Most of these seems to be trees
+			// TODO, do we need to clip to the bounds?
+            ret.m_geometry.push_back(AttributedGeometry(i.second->m_attrs.release(), getPoint(i.second->m_pos)));
+		}
     }
 
     dmess("a " << a << " b " << b);
@@ -373,7 +383,7 @@ void OSM_Reader::handleRelation(const char **atts)
 
     Attributes * attrs = curr->m_attrs.get();
 
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {
@@ -405,7 +415,7 @@ void OSM_Reader::handleMember(const char **atts)
 
     currRelation->m_members.push_back(member);
 
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {
@@ -423,7 +433,7 @@ void OSM_Reader::handleTag(const char **atts)
     string key;
     string value;
 
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {
@@ -443,7 +453,7 @@ void OSM_Reader::handleNode(const char **atts)
 
     Attributes * attrs = curr->m_attrs.get();
 
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {
@@ -477,7 +487,7 @@ void OSM_Reader::handleWay(const char **atts)
 
     Attributes * attrs = curr->m_attrs.get();
 
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {
@@ -505,7 +515,7 @@ void OSM_Reader::handleWay(const char **atts)
 
 void OSM_Reader::handleND(const char **atts)
 {
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {
@@ -525,7 +535,7 @@ void OSM_Reader::handleND(const char **atts)
 
 void OSM_Reader::handleBounds(const char **atts)
 {
-    for(size_t i = 0; atts[i] != NULL; i += 2)
+    for(size_t i = 0; atts[i] != nullptr; i += 2)
     {
         switch(getKey(atts[i]))
         {

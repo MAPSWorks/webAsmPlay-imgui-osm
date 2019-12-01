@@ -25,7 +25,7 @@
 */
 
 #include <webAsmPlay/Debug.h>
-#include <webAsmPlay/ColorSymbology.h>
+#include <webAsmPlay/shaders/ColorSymbology.h>
 #include <webAsmPlay/shaders/BindlessTextureShader.h>
 #include <webAsmPlay/shaders/ColorDistanceDepthShader3D.h>
 #include <webAsmPlay/shaders/ColorDistanceShader.h>
@@ -37,6 +37,8 @@
 #include <webAsmPlay/shaders/NormalToRGB_Shader.h>
 #include <webAsmPlay/shaders/DepthToRGB_Shader.h>
 #include <webAsmPlay/shaders/TileBoundaryShader.h>
+#include <webAsmPlay/shaders/PhongShader.h>
+#include <webAsmPlay/shaders/PhongShaderInstanced.h>
 #include <webAsmPlay/shaders/ShaderProgram.h>
 #include <webAsmPlay/shaders/Shader.h>
 
@@ -45,41 +47,58 @@ using namespace glm;
 
 vector<function<void()>> Shader::s_shadersToRegister;
 
-Shader::Shader(const string  & shaderName) :    m_shaderName     (shaderName),
-                                                m_colorSymbology (ColorSymbology::getInstance("defaultPolygon")) {}
+Shader::ShouldRenderFunctor Shader::s_defaultShouldRender = {[](const bool isOutline, const size_t renderingStage)
+{
+	return renderingStage == POST_G_BUFFER;
+}};
+
+Shader::Shader(	const string				& shaderName,
+				ColorSymbology				* colorSymbology,
+				const ShouldRenderFunctor	& shouldRenderFunctor) :    m_shaderName		(shaderName),
+																		m_colorSymbology	(colorSymbology ? colorSymbology : ColorSymbology::getInstance("defaultPolygon")),
+																		m_shouldRender		(shouldRenderFunctor) {}
 
 string Shader::getName() const { return m_shaderName ;}
 
 size_t Shader::getNumRenderingStages() const { return 1 ;}
 
-bool Shader::shouldRender(const bool isOutline, const size_t renderingStage) const { return renderingStage == 0 ;}
-
 ColorSymbology * Shader::setColorSymbology(ColorSymbology * colorSymbology) { return m_colorSymbology = colorSymbology	;}
 ColorSymbology * Shader::getColorSymbology() const							{ return m_colorSymbology					;}
+
+void Shader::bind(	const mat4		& model,
+					const mat4		& view,
+					const mat4		& projection,
+					const bool		  isOutline,
+					const size_t	  renderingStage)
+{
+	dmessError("Implement me!");
+}
+
+void Shader::ensureShaders()
+{
+	BindlessTextureShader		::ensureShader();
+	ColorDistanceDepthShader3D	::ensureShader();
+	ColorDistanceShader			::ensureShader();
+	ColorShader					::ensureShader();
+	ColorVertexShader			::ensureShader();
+	SkyBoxShader				::ensureShader();
+	SsaoShader					::ensureShader();
+	TextureShader				::ensureShader();
+	NormalToRGB_Shader			::ensureShader();
+	DepthToRGB_Shader			::ensureShader();
+	TileBoundaryShader			::ensureShader();
+	PhongShader					::ensureShader();
+	PhongShaderInstanced		::ensureShader();
+
+	for (const auto& i : s_shadersToRegister)
+	{
+		// i(); // This does not seem to work.
+	}
+}
 
 RegisterShader::RegisterShader(const function<void()> & registerFunction)
 {
 	dmess("RegisterShader");
 
 	Shader::s_shadersToRegister.push_back(registerFunction);
-}
-
-void Shader::ensureShaders()
-{
-	BindlessTextureShader::ensureShader();
-	ColorDistanceDepthShader3D::ensureShader();
-	ColorDistanceShader::ensureShader();
-	ColorShader::ensureShader();
-	ColorVertexShader::ensureShader();
-	SkyBoxShader::ensureShader();
-	SsaoShader::ensureShader();
-	TextureShader::ensureShader();
-	NormalToRGB_Shader::ensureShader();
-	DepthToRGB_Shader::ensureShader();
-	TileBoundaryShader::ensureShader();
-
-	for (const auto& i : s_shadersToRegister)
-	{
-		// i(); // This does not seem to work.
-	}
 }
